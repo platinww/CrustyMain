@@ -455,8 +455,8 @@ end
         game.Debris:AddItem(Highlight, 10)
         
         accel.Value = true
-        attribute.Value = 500
-        char.Humanoid.WalkSpeed = 500
+        attribute.Value = 200
+        char.Humanoid.WalkSpeed = 200
         
         task.spawn(function()
           repeat task.wait()
