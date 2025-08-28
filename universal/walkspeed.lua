@@ -358,7 +358,7 @@ end
        char.LeftHand.FireLine.Enabled = (accel.Value == false and false or true)
        char.RightHand.FireLine.Enabled = (accel.Value == false and false or true)
      else
-       attribute.Value = (accel.Value == true and 25000 or 2500)
+       attribute.Value = (accel.Value == true and 25000 or 200)
        char.Humanoid.WalkSpeed = attribute.Value
        char.Animate.run.RunAnim.AnimationId = "rbxassetid://82598234841035"
        
