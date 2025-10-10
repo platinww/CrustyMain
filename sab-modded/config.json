@@ -1,0 +1,8 @@
+{
+  "PlotsFolderName": "Plots",
+  "PlotSignName": "PlotSign",
+  "DeliveryHitboxName": "DeliveryHitbox",
+  "OwnerLabelPattern": "(.+)'s Base",
+  "SearchRetries": 5,
+  "SearchDelay": 0.25
+}
