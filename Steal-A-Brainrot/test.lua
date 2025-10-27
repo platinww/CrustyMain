@@ -1,5 +1,5 @@
--- CrustyButton System with WindUI
-local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+-- CrustyButton System with Redz Library
+local UIRedz = loadstring(game:HttpGet("https://raw.githubusercontent.com/platinww/CrustyMain/refs/heads/main/UISettings/UIRedz.lua"))()
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -165,7 +165,7 @@ local function updateServiceStatus(serviceName, isActive)
     end
 end
 
--- CrustyButton System
+-- Enhanced CrustyButton System with RGB Effect
 local CrustyButton = {}
 CrustyButton.__index = CrustyButton
 
@@ -173,12 +173,6 @@ function CrustyButton.new(config)
     local self = setmetatable({}, CrustyButton)
     
     self.text = config.Text or "Button"
-    self.color = config.Color or Color3.fromRGB(255, 200, 0)
-    self.colorActive = config.ColorActive or Color3.fromRGB(150, 60, 60)
-    self.strokeColor = config.StrokeColor or Color3.fromRGB(200, 150, 0)
-    self.strokeColorActive = config.StrokeColorActive or Color3.fromRGB(100, 30, 30)
-    self.textStrokeColor = config.TextStrokeColor or Color3.fromRGB(100, 80, 0)
-    self.textStrokeColorActive = config.TextStrokeColorActive or Color3.fromRGB(50, 20, 20)
     self.callback = config.Callback or function() end
     self.position = config.Position or UDim2.new(0.5, 0, 0.5, 0)
     
@@ -194,35 +188,44 @@ function CrustyButton:CreateButton()
     
     local button = Instance.new("TextButton")
     button.Name = "CrustyButton"
-    button.Size = UDim2.new(0, 200, 0, 60)
+    button.Size = UDim2.new(0, 120, 0, 40)
     button.Position = self.position
     button.AnchorPoint = Vector2.new(0.5, 0.5)
-    button.BackgroundColor3 = self.color
+    button.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     button.Text = self.text
     button.TextColor3 = Color3.fromRGB(255, 255, 255)
-    button.TextSize = 20
+    button.TextSize = 14
     button.Font = Enum.Font.GothamBold
-    button.TextStrokeTransparency = 0.5
-    button.TextStrokeColor3 = self.textStrokeColor
+    button.TextStrokeTransparency = 0.3
+    button.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    button.BorderSizePixel = 0
     button.Parent = screenGui
     
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 12)
+    corner.CornerRadius = UDim.new(0, 10)
     corner.Parent = button
     
     local stroke = Instance.new("UIStroke")
-    stroke.Color = self.strokeColor
-    stroke.Thickness = 3
+    stroke.Color = Color3.fromRGB(255, 255, 255)
+    stroke.Thickness = 2
     stroke.Parent = button
     
-    local gradient = Instance.new("UIGradient")
-    gradient.Color = ColorSequence.new{
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 200, 200))
-    }
-    gradient.Rotation = 90
-    gradient.Parent = button
+    -- RGB Effect
+    task.spawn(function()
+        local t = 0
+        while button.Parent do
+            t += 0.05
+            local r = math.sin(t * 2) * 127 + 128
+            local g = math.sin(t * 2 + 2) * 127 + 128
+            local b = math.sin(t * 2 + 4) * 127 + 128
+            local color = Color3.fromRGB(r, g, b)
+            button.BackgroundColor3 = color
+            stroke.Color = color
+            task.wait(0.05)
+        end
+    end)
     
+    -- Dragging functionality
     local dragging = false
     local dragInput, mousePos, framePos
     
@@ -258,21 +261,22 @@ function CrustyButton:CreateButton()
         end
     end)
     
+    -- Click functionality
     local isActive = false
     button.MouseButton1Click:Connect(function()
         isActive = not isActive
         
-        TweenService:Create(button, TweenInfo.new(0.2), {
-            BackgroundColor3 = isActive and self.colorActive or self.color
-        }):Play()
+        -- Scale animation
+        local scaleTween = TweenService:Create(button, TweenInfo.new(0.1, Enum.EasingStyle.Quad), {
+            Size = isActive and UDim2.new(0, 115, 0, 38) or UDim2.new(0, 120, 0, 40)
+        })
+        scaleTween:Play()
+        scaleTween.Completed:Wait()
         
-        TweenService:Create(stroke, TweenInfo.new(0.2), {
-            Color = isActive and self.strokeColorActive or self.strokeColor
-        }):Play()
-        
-        TweenService:Create(button, TweenInfo.new(0.2), {
-            TextStrokeColor3 = isActive and self.textStrokeColorActive or self.textStrokeColor
-        }):Play()
+        local scaleTween2 = TweenService:Create(button, TweenInfo.new(0.1, Enum.EasingStyle.Quad), {
+            Size = UDim2.new(0, 120, 0, 40)
+        })
+        scaleTween2:Play()
         
         self.callback(isActive)
     end)
@@ -428,88 +432,58 @@ local function removeBlur(state)
     end
 end
 
--- Create WindUI Window
-local Window = WindUI:CreateWindow({
-    Title = "Crusty Hub",
-    Icon = "flame",
-    Author = "by crusty.dev.tc",
-    Folder = "CrustyHub",
-    Size = UDim2.fromOffset(580, 460),
-    Theme = "Dark",
-    Resizable = true,
-    SideBarWidth = 200,
+-- Create Redz UI Window
+local Window = UIRedz:CreateWindow({
+    Name = "Crusty Hub",
+    Size = UDim2.new(0, 550, 0, 450),
+    Theme = "Dark"
 })
 
 -- Main Tab
-local MainTab = Window:Tab({
-    Title = "Main",
-    Icon = "home",
-})
+local MainTab = Window:CreateTab("Main", UIRedz.Icons["home"])
 
-local MainSection = MainTab:Section({
-    Title = "Information",
-    Icon = "info",
-})
-
-MainSection:Button({
-    Title = "Discord Server",
-    Desc = "Join our community!",
+MainTab:Button({
+    Name = "Discord Server",
     Callback = function()
         setclipboard("discord.gg/crusty-hub-1401564054186758186")
-        WindUI:Notify({
+        game.StarterGui:SetCore("SendNotification", {
             Title = "Discord Link Copied!",
-            Content = "discord.gg/crusty-hub-1401564054186758186",
-            Duration = 3,
+            Text = "discord.gg/crusty-hub-1401564054186758186",
+            Duration = 3
         })
     end
 })
 
-MainSection:Button({
-    Title = "Website",
-    Desc = "Visit our website",
+MainTab:Button({
+    Name = "Website",
     Callback = function()
         setclipboard("https://crusty.dev.tc/")
-        WindUI:Notify({
+        game.StarterGui:SetCore("SendNotification", {
             Title = "Website Link Copied!",
-            Content = "https://crusty.dev.tc/",
-            Duration = 3,
+            Text = "https://crusty.dev.tc/",
+            Duration = 3
         })
     end
 })
 
 -- Helper Tab
-local HelperTab = Window:Tab({
-    Title = "Helper",
-    Icon = "heart-handshake",
-})
+local HelperTab = Window:CreateTab("Helper", UIRedz.Icons["award"])
 
-local AutomationSection = HelperTab:Section({
-    Title = "Automation",
-    Icon = "plane",
-})
-
-AutomationSection:Button({
-    Title = "Fly to Best",
-    Desc = "Automatically fly to the best brainrot",
+HelperTab:Button({
+    Name = "Fly to Best",
     Callback = function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/platinww/CrustyMain/refs/heads/main/Steal-A-Brainrot/Fly-TO-Best.lua"))()
-        WindUI:Notify({
+        game.StarterGui:SetCore("SendNotification", {
             Title = "Fly to Best",
-            Content = "Automation script loaded!",
-            Duration = 2,
+            Text = "Automation script loaded!",
+            Duration = 2
         })
     end
 })
 
-local RebirthESPSection = HelperTab:Section({
-    Title = "Rebirth ESP",
-    Icon = "award",
-})
-
-RebirthESPSection:Toggle({
-    Title = "ESP Rebirth Needed Brainrots",
-    Desc = "Show ESP for brainrots needed for next rebirth",
-    Value = false,
+HelperTab:Toggle({
+    Name = "ESP Rebirth Needed Brainrots",
+    Default = false,
     Callback = function(state)
         updateServiceStatus("Rebirth ESP", state)
         
@@ -588,20 +562,20 @@ RebirthESPSection:Toggle({
                 local nextRebirthData = rebirthData[currentRebirth + 1]
                 
                 if not nextRebirthData then 
-                    WindUI:Notify({
+                    game.StarterGui:SetCore("SendNotification", {
                         Title = "Max Rebirth",
-                        Content = "You are at max rebirth level!",
-                        Duration = 2,
+                        Text = "You are at max rebirth level!",
+                        Duration = 2
                     })
                     return 
                 end
                 
                 local neededBrainrots = nextRebirthData.brainrots
                 
-                WindUI:Notify({
+                game.StarterGui:SetCore("SendNotification", {
                     Title = "Next Rebirth: " .. nextRebirthData.rebirth,
-                    Content = "Need: " .. table.concat(neededBrainrots, ", "),
-                    Duration = 4,
+                    Text = "Need: " .. table.concat(neededBrainrots, ", "),
+                    Duration = 4
                 })
                 
                 for _, model in ipairs(workspace:GetChildren()) do
@@ -643,20 +617,11 @@ RebirthESPSection:Toggle({
 })
 
 -- Player Tab
-local PlayerTab = Window:Tab({
-    Title = "Player",
-    Icon = "user",
-})
+local PlayerTab = Window:CreateTab("Player", UIRedz.Icons["user"])
 
-local ESPSection = PlayerTab:Section({
-    Title = "ESP Features",
-    Icon = "eye",
-})
-
-ESPSection:Toggle({
-    Title = "ESP Players",
-    Desc = "Show ESP for all players",
-    Value = false,
+PlayerTab:Toggle({
+    Name = "ESP Players",
+    Default = false,
     Callback = function(state)
         updateServiceStatus("ESP Players", state)
         
@@ -713,10 +678,9 @@ ESPSection:Toggle({
     end
 })
 
-ESPSection:Toggle({
-    Title = "ESP Remaining Time",
-    Desc = "Enhance time display visibility",
-    Value = false,
+PlayerTab:Toggle({
+    Name = "ESP Remaining Time",
+    Default = false,
     Callback = function(state)
         updateServiceStatus("ESP Time", state)
         
@@ -780,10 +744,9 @@ ESPSection:Toggle({
     end
 })
 
-ESPSection:Toggle({
-    Title = "ESP Best Brainrot",
-    Desc = "Track the best generation pet",
-    Value = false,
+PlayerTab:Toggle({
+    Name = "ESP Best Brainrot",
+    Default = false,
     Callback = function(state)
         updateServiceStatus("ESP Best", state)
         
@@ -891,15 +854,9 @@ ESPSection:Toggle({
     end
 })
 
-local UtilitySection = PlayerTab:Section({
-    Title = "Utility",
-    Icon = "shield",
-})
-
-UtilitySection:Toggle({
-    Title = "Anti-AFK",
-    Desc = "Prevents getting kicked for being idle",
-    Value = false,
+PlayerTab:Toggle({
+    Name = "Anti-AFK",
+    Default = false,
     Callback = function(state)
         updateServiceStatus("Anti-AFK", state)
         
@@ -912,163 +869,130 @@ UtilitySection:Toggle({
                 VirtualUser:CaptureController()
                 VirtualUser:ClickButton2(Vector2.new())
             end)
-            WindUI:Notify({
+            game.StarterGui:SetCore("SendNotification", {
                 Title = "Anti-AFK Enabled",
-                Content = "You won't be kicked for being idle!",
-                Duration = 2,
+                Text = "You won't be kicked for being idle!",
+                Duration = 2
             })
         else
             if getgenv().AntiAFKConnection then
                 getgenv().AntiAFKConnection:Disconnect()
                 getgenv().AntiAFKConnection = nil
             end
-            WindUI:Notify({
+            game.StarterGui:SetCore("SendNotification", {
                 Title = "Anti-AFK Disabled",
-                Content = "Anti-AFK protection removed",
-                Duration = 2,
+                Text = "Anti-AFK protection removed",
+                Duration = 2
             })
         end
     end
 })
 
 PlayerTab:Button({
-    Title = "Generate Private Server",
-    Desc = "(PATCHED)",
+    Name = "Generate Private Server (PATCHED)",
     Callback = function()
-        WindUI:Notify({
+        game.StarterGui:SetCore("SendNotification", {
             Title = "Service Patched",
-            Content = "That Service Was Patched",
-            Duration = 3,
+            Text = "That Service Was Patched",
+            Duration = 3
         })
     end
 })
 
 -- Visual Tab
-local VisualTab = Window:Tab({
-    Title = "Visual",
-    Icon = "eye",
-})
+local VisualTab = Window:CreateTab("Visual", UIRedz.Icons["eye"])
 
-local AppearanceSection = VisualTab:Section({
-    Title = "Appearance",
-    Icon = "user-x",
-})
-
-AppearanceSection:Toggle({
-    Title = "Hide Username",
-    Desc = "Hide your display name from others",
-    Value = false,
+VisualTab:Toggle({
+    Name = "Hide Username",
+    Default = false,
     Callback = function(state)
         updateServiceStatus("Hide Username", state)
         hideUsername(state)
-        WindUI:Notify({
+        game.StarterGui:SetCore("SendNotification", {
             Title = state and "Username Hidden" or "Username Visible",
-            Content = state and "Your username is now hidden!" or "Your username is now visible!",
-            Duration = 2,
+            Text = state and "Your username is now hidden!" or "Your username is now visible!",
+            Duration = 2
         })
     end
 })
 
-local VisionSection = VisualTab:Section({
-    Title = "Vision Enhancements",
-    Icon = "monitor",
-})
-
-VisionSection:Toggle({
-    Title = "Xray Mode",
-    Desc = "See through walls",
-    Value = false,
+VisualTab:Toggle({
+    Name = "Xray Mode",
+    Default = false,
     Callback = function(state)
         updateServiceStatus("Xray Mode", state)
         xrayMode(state)
-        WindUI:Notify({
+        game.StarterGui:SetCore("SendNotification", {
             Title = state and "Xray Enabled" or "Xray Disabled",
-            Content = state and "You can now see through walls!" or "Xray mode disabled",
-            Duration = 2,
+            Text = state and "You can now see through walls!" or "Xray mode disabled",
+            Duration = 2
         })
     end
 })
 
-VisionSection:Toggle({
-    Title = "Full Bright",
-    Desc = "Maximum brightness everywhere",
-    Value = false,
+VisualTab:Toggle({
+    Name = "Full Bright",
+    Default = false,
     Callback = function(state)
         updateServiceStatus("Full Bright", state)
         fullBright(state)
-        WindUI:Notify({
+        game.StarterGui:SetCore("SendNotification", {
             Title = state and "Full Bright Enabled" or "Full Bright Disabled",
-            Content = state and "Everything is now bright!" or "Lighting restored",
-            Duration = 2,
+            Text = state and "Everything is now bright!" or "Lighting restored",
+            Duration = 2
         })
     end
 })
 
-VisionSection:Toggle({
-    Title = "Night Vision",
-    Desc = "Green tinted night vision effect",
-    Value = false,
+VisualTab:Toggle({
+    Name = "Night Vision",
+    Default = false,
     Callback = function(state)
         updateServiceStatus("Night Vision", state)
         nightVision(state)
-        WindUI:Notify({
+        game.StarterGui:SetCore("SendNotification", {
             Title = state and "Night Vision Enabled" or "Night Vision Disabled",
-            Content = state and "Night vision activated!" or "Night vision deactivated",
-            Duration = 2,
+            Text = state and "Night vision activated!" or "Night vision deactivated",
+            Duration = 2
         })
     end
 })
 
-VisionSection:Slider({
-    Title = "FOV Slider",
-    Step = 1,
-    Value = { Min = 70, Max = 120, Default = 70 },
+VisualTab:Slider({
+    Name = "FOV Slider",
+    Min = 70,
+    Max = 120,
+    Default = 70,
     Callback = function(value)
         camera.FieldOfView = value
     end
 })
 
-VisionSection:Toggle({
-    Title = "Remove Blur",
-    Desc = "Remove all blur and depth effects",
-    Value = false,
+VisualTab:Toggle({
+    Name = "Remove Blur",
+    Default = false,
     Callback = function(state)
         updateServiceStatus("Remove Blur", state)
         removeBlur(state)
-        WindUI:Notify({
+        game.StarterGui:SetCore("SendNotification", {
             Title = state and "Blur Removed" or "Blur Restored",
-            Content = state and "All blur effects removed!" or "Blur effects restored",
-            Duration = 2,
+            Text = state and "All blur effects removed!" or "Blur effects restored",
+            Duration = 2
         })
     end
 })
 
 -- Stealer Tab
-local StealerTab = Window:Tab({
-    Title = "Stealer",
-    Icon = "zap",
-})
+local StealerTab = Window:CreateTab("Stealer", UIRedz.Icons["zap"])
 
-local ButtonSection = StealerTab:Section({
-    Title = "CrustyButton System",
-    Icon = "plus-square",
-})
-
-ButtonSection:Toggle({
-    Title = "DeSync Button",
-    Desc = "Create DeSync button on screen",
-    Value = false,
+StealerTab:Toggle({
+    Name = "DeSync Button",
+    Default = false,
     Callback = function(state)
         if state then
             CrustyButton.new({
                 Text = "DESYNC",
-                Color = Color3.fromRGB(0, 255, 100),
-                StrokeColor = Color3.fromRGB(0, 200, 80),
-                TextStrokeColor = Color3.fromRGB(0, 100, 0),
-                ColorActive = Color3.fromRGB(0, 150, 60),
-                StrokeColorActive = Color3.fromRGB(0, 100, 40),
-                TextStrokeColorActive = Color3.fromRGB(0, 50, 0),
-                Position = UDim2.new(0.5, -110, 0.5, 0),
+                Position = UDim2.new(0.5, -70, 0.5, 0),
                 Callback = function()
                     if isDesyncActive then
                         return
@@ -1118,10 +1042,10 @@ ButtonSection:Toggle({
                     task.wait(0.3)
                     isDesyncActive = false
                     
-                    WindUI:Notify({
+                    game.StarterGui:SetCore("SendNotification", {
                         Title = "DeSync",
-                        Content = ok and "DeSync executed!" or "DeSync failed!",
-                        Duration = 2,
+                        Text = ok and "DeSync executed!" or "DeSync failed!",
+                        Duration = 2
                     })
                 end
             })
@@ -1136,21 +1060,14 @@ ButtonSection:Toggle({
     end
 })
 
-ButtonSection:Toggle({
-    Title = "3RD FLOOR Button",
-    Desc = "Create platform to go up",
-    Value = false,
+StealerTab:Toggle({
+    Name = "3RD FLOOR Button",
+    Default = false,
     Callback = function(state)
         if state then
             CrustyButton.new({
                 Text = "3RD FLOOR",
-                Color = Color3.fromRGB(255, 200, 0),
-                ColorActive = Color3.fromRGB(150, 60, 60),
-                StrokeColor = Color3.fromRGB(200, 150, 0),
-                StrokeColorActive = Color3.fromRGB(100, 30, 30),
-                TextStrokeColor = Color3.fromRGB(100, 80, 0),
-                TextStrokeColorActive = Color3.fromRGB(50, 20, 20),
-                Position = UDim2.new(0.5, 110, 0.5, 0),
+                Position = UDim2.new(0.5, 70, 0.5, 0),
                 Callback = function(btnState)
                     local speed = 8
                     local platformSize = Vector3.new(6, 1, 6)
@@ -1304,138 +1221,17 @@ ButtonSection:Toggle({
     end
 })
 
--- UI Settings Tab
-local SettingsTab = Window:Tab({
-    Title = "UI Settings",
-    Icon = "settings",
-})
-
-local ThemeSection = SettingsTab:Section({
-    Title = "Theme Selection",
-    Icon = "palette",
-})
-
-ThemeSection:Dropdown({
-    Title = "Select Theme",
-    Values = { "Dark", "Light", "Darker", "Aqua", "Jester", "Red", "Amoled" },
-    Value = { "Dark" },
-    Multi = false,
-    Callback = function(option)
-        WindUI:SetTheme(option[1] or option)
-        WindUI:Notify({
-            Title = "Theme Changed",
-            Content = "Theme set to: " .. (option[1] or option),
-            Duration = 2,
-        })
-    end
-})
-
-local CustomThemeSection = SettingsTab:Section({
-    Title = "Custom Theme",
-    Icon = "droplet",
-})
-
-CustomThemeSection:Button({
-    Title = "Apply Crusty Theme",
-    Desc = "Orange & Gold custom theme",
-    Callback = function()
-        WindUI:AddTheme({
-            Name = "Crusty",
-            Accent = Color3.fromHex("#ff6b00"),
-            Dialog = Color3.fromHex("#1a1410"),
-            Outline = Color3.fromHex("#ffa500"),
-            Text = Color3.fromHex("#ffffff"),
-            Placeholder = Color3.fromHex("#b8860b"),
-            Background = Color3.fromHex("#0f0c0a"),
-            Button = Color3.fromHex("#ff8c00"),
-            Icon = Color3.fromHex("#ffd700")
-        })
-        WindUI:SetTheme("Crusty")
-        WindUI:Notify({
-            Title = "Crusty Theme Applied",
-            Content = "Enjoy the orange & gold theme!",
-            Duration = 3,
-        })
-    end
-})
-
-CustomThemeSection:Button({
-    Title = "Apply Neon Theme",
-    Desc = "Bright neon green theme",
-    Callback = function()
-        WindUI:AddTheme({
-            Name = "Neon",
-            Accent = Color3.fromHex("#00ff00"),
-            Dialog = Color3.fromHex("#0a1a0a"),
-            Outline = Color3.fromHex("#39ff14"),
-            Text = Color3.fromHex("#ffffff"),
-            Placeholder = Color3.fromHex("#90ee90"),
-            Background = Color3.fromHex("#050f05"),
-            Button = Color3.fromHex("#00cc00"),
-            Icon = Color3.fromHex("#7fff00")
-        })
-        WindUI:SetTheme("Neon")
-        WindUI:Notify({
-            Title = "Neon Theme Applied",
-            Content = "Neon green activated!",
-            Duration = 3,
-        })
-    end
-})
-
-CustomThemeSection:Button({
-    Title = "Apply Purple Theme",
-    Desc = "Royal purple theme",
-    Callback = function()
-        WindUI:AddTheme({
-            Name = "Purple",
-            Accent = Color3.fromHex("#8b00ff"),
-            Dialog = Color3.fromHex("#1a0f2e"),
-            Outline = Color3.fromHex("#b19cd9"),
-            Text = Color3.fromHex("#ffffff"),
-            Placeholder = Color3.fromHex("#9370db"),
-            Background = Color3.fromHex("#0f0a1a"),
-            Button = Color3.fromHex("#7b2cbf"),
-            Icon = Color3.fromHex("#c77dff")
-        })
-        WindUI:SetTheme("Purple")
-        WindUI:Notify({
-            Title = "Purple Theme Applied",
-            Content = "Royal purple is now active!",
-            Duration = 3,
-        })
-    end
-})
-
-local UIControlSection = SettingsTab:Section({
-    Title = "UI Controls",
-    Icon = "sliders",
-})
-
-UIControlSection:Button({
-    Title = "Destroy All Buttons",
-    Desc = "Remove all CrustyButtons from screen",
+StealerTab:Button({
+    Name = "Destroy All Buttons",
     Callback = function()
         local count = #activeButtons
         for i = #activeButtons, 1, -1 do
             activeButtons[i]:Destroy()
         end
-        WindUI:Notify({
+        game.StarterGui:SetCore("SendNotification", {
             Title = "Buttons Destroyed",
-            Content = "Removed " .. count .. " button(s)",
-            Duration = 2,
-        })
-    end
-})
-
-UIControlSection:Button({
-    Title = "Reset UI Position",
-    Desc = "Center the UI window",
-    Callback = function()
-        WindUI:Notify({
-            Title = "UI Reset",
-            Content = "UI position has been reset",
-            Duration = 2,
+            Text = "Removed " .. count .. " button(s)",
+            Duration = 2
         })
     end
 })
@@ -1465,8 +1261,8 @@ player.CharacterAdded:Connect(function()
     end
 end)
 
-WindUI:Notify({
+game.StarterGui:SetCore("SendNotification", {
     Title = "Crusty Hub Loaded!",
-    Content = "Welcome to Crusty Hub! 🔥",
-    Duration = 3,
+    Text = "Welcome to Crusty Hub! 🔥",
+    Duration = 3
 })
