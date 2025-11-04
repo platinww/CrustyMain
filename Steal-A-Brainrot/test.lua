@@ -231,32 +231,22 @@ spawnButton.MouseButton1Click:Connect(function()
 		if child:IsA("Model") then
 			print("İlk model yakalandı: " .. child.Name)
 			
-			-- Eski modelin scriptlerini ve özelliklerini sakla
+			-- Eski modelin pozisyonunu al
 			local oldPrimaryPart = child.PrimaryPart or child:FindFirstChildWhichIsA("BasePart")
-			local oldCFrame = oldPrimaryPart and oldPrimaryPart.CFrame or CFrame.new(0, 0, 0)
-			
-			-- Eski modelin içindeki TÜM scriptleri bul
-			local scriptsToKeep = {}
-			for _, descendant in pairs(child:GetDescendants()) do
-				if descendant:IsA("Script") or descendant:IsA("LocalScript") or descendant:IsA("ModuleScript") then
-					table.insert(scriptsToKeep, descendant:Clone())
-				end
-			end
+			local oldCFrame = oldPrimaryPart and oldPrimaryPart.CFrame or CFrame.new(0, 5, 0)
 			
 			-- Yeni modeli klonla
 			local clonedModel = newModel:Clone()
 			clonedModel.Name = child.Name
 			
-			-- Eski modelin pozisyonunu ayarla
-			if clonedModel.PrimaryPart then
-				clonedModel:SetPrimaryPartCFrame(oldCFrame)
-			elseif clonedModel:FindFirstChildWhichIsA("BasePart") then
-				clonedModel:FindFirstChildWhichIsA("BasePart").CFrame = oldCFrame
-			end
+			-- Yeni modeli workspace'e ekle
+			clonedModel.Parent = renderedFolder
 			
-			-- ESKİ scriptleri YENİ modele ekle (hareket scriptleri çalışsın)
-			for _, script in pairs(scriptsToKeep) do
-				script.Parent = clonedModel
+			-- 5 STUD YUKARIDA spawn et
+			if clonedModel.PrimaryPart then
+				clonedModel:SetPrimaryPartCFrame(oldCFrame * CFrame.new(0, 5, 0))
+			elseif clonedModel:FindFirstChildWhichIsA("BasePart") then
+				clonedModel:FindFirstChildWhichIsA("BasePart").CFrame = oldCFrame * CFrame.new(0, 5, 0)
 			end
 			
 			-- AnimationController ekle
@@ -264,6 +254,7 @@ spawnButton.MouseButton1Click:Connect(function()
 			if not animController then
 				animController = Instance.new("AnimationController")
 				animController.Parent = clonedModel
+				print("AnimationController oluşturuldu")
 			end
 			
 			-- Animator ekle
@@ -271,12 +262,39 @@ spawnButton.MouseButton1Click:Connect(function()
 			if not animator then
 				animator = Instance.new("Animator")
 				animator.Parent = animController
+				print("Animator oluşturuldu")
 			end
 			
-			-- Walk animasyonunu yükle ve oynat
-			local walkTrack = animator:LoadAnimation(walkAnimation)
-			walkTrack:Play()
-			walkTrack.Looped = true
+			-- Animasyonu yükle (task.wait ile bekle)
+			task.wait(0.1)
+			
+			if walkAnimation and walkAnimation:IsA("Animation") then
+				print("Animasyon yükleniyor: " .. walkAnimation.AnimationId)
+				local success, walkTrack = pcall(function()
+					return animator:LoadAnimation(walkAnimation)
+				end)
+				
+				if success and walkTrack then
+					walkTrack.Looped = true
+					walkTrack:Play()
+					print("✅ Animasyon oynatılıyor!")
+				else
+					warn("❌ Animasyon yüklenemedi!")
+				end
+			else
+				warn("❌ Walk animasyonu geçerli bir Animation değil!")
+			end
+			
+			-- 15 hız ile ileri doğru hareket ettir
+			local primaryPart = clonedModel.PrimaryPart or clonedModel:FindFirstChildWhichIsA("BasePart")
+			if primaryPart then
+				-- BodyVelocity ekle
+				local bodyVelocity = Instance.new("BodyVelocity")
+				bodyVelocity.Velocity = primaryPart.CFrame.LookVector * 15
+				bodyVelocity.MaxForce = Vector3.new(4000, 0, 4000)
+				bodyVelocity.Parent = primaryPart
+				print("✅ BodyVelocity eklendi, hız: 15")
+			end
 			
 			-- Sesi ekle
 			if animalSound and animalSound:IsA("Sound") then
@@ -290,11 +308,8 @@ spawnButton.MouseButton1Click:Connect(function()
 					end)
 				end
 				
-				print("Ses çalınıyor: " .. brainrotName)
+				print("✅ Ses çalınıyor: " .. brainrotName)
 			end
-			
-			-- Yeni modeli workspace'e ekle
-			clonedModel.Parent = renderedFolder
 			
 			-- Eski modeli SİL
 			child:Destroy()
