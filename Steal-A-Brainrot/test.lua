@@ -1,7 +1,7 @@
--- Crusty Data Copier - Full Game Scanner
--- Tüm oyunu tarar ve kopyalar
+-- CRUSTY DATA COPIER - EXPLOIT VERSION
+-- Hatasız, hızlı, güvenli
 
-local player = game.Players.LocalPlayer
+local player = game:GetService("Players").LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
 -- UI Oluştur
@@ -9,11 +9,17 @@ local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "CrustyDataCopier"
 screenGui.ResetOnSpawn = false
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-screenGui.Parent = playerGui
+
+pcall(function()
+	screenGui.Parent = playerGui
+end)
+
+if not screenGui.Parent then
+	screenGui.Parent = game:GetService("CoreGui")
+end
 
 -- Ana Frame
 local mainFrame = Instance.new("Frame")
-mainFrame.Name = "MainFrame"
 mainFrame.Size = UDim2.new(0, 500, 0, 300)
 mainFrame.Position = UDim2.new(0.5, -250, 0.5, -150)
 mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
@@ -26,7 +32,6 @@ mainCorner.Parent = mainFrame
 
 -- Header
 local header = Instance.new("TextLabel")
-header.Name = "Header"
 header.Size = UDim2.new(1, 0, 0, 60)
 header.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 header.BorderSizePixel = 0
@@ -42,7 +47,6 @@ headerCorner.Parent = header
 
 -- Progress Label
 local progressLabel = Instance.new("TextLabel")
-progressLabel.Name = "ProgressLabel"
 progressLabel.Size = UDim2.new(1, -40, 0, 30)
 progressLabel.Position = UDim2.new(0, 20, 0, 80)
 progressLabel.BackgroundTransparency = 1
@@ -53,9 +57,8 @@ progressLabel.Font = Enum.Font.Gotham
 progressLabel.TextXAlignment = Enum.TextXAlignment.Left
 progressLabel.Parent = mainFrame
 
--- Progress Bar Arka Plan
+-- Progress Bar BG
 local progressBg = Instance.new("Frame")
-progressBg.Name = "ProgressBg"
 progressBg.Size = UDim2.new(1, -40, 0, 30)
 progressBg.Position = UDim2.new(0, 20, 0, 120)
 progressBg.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
@@ -68,7 +71,6 @@ progressBgCorner.Parent = progressBg
 
 -- Progress Bar
 local progressBar = Instance.new("Frame")
-progressBar.Name = "ProgressBar"
 progressBar.Size = UDim2.new(0, 0, 1, 0)
 progressBar.BackgroundColor3 = Color3.fromRGB(100, 200, 100)
 progressBar.BorderSizePixel = 0
@@ -80,7 +82,6 @@ progressBarCorner.Parent = progressBar
 
 -- Percent Label
 local percentLabel = Instance.new("TextLabel")
-percentLabel.Name = "PercentLabel"
 percentLabel.Size = UDim2.new(1, 0, 1, 0)
 percentLabel.BackgroundTransparency = 1
 percentLabel.Text = "0%"
@@ -91,7 +92,6 @@ percentLabel.Parent = progressBg
 
 -- Stats Label
 local statsLabel = Instance.new("TextLabel")
-statsLabel.Name = "StatsLabel"
 statsLabel.Size = UDim2.new(1, -40, 0, 80)
 statsLabel.Position = UDim2.new(0, 20, 0, 160)
 statsLabel.BackgroundTransparency = 1
@@ -105,24 +105,22 @@ statsLabel.Parent = mainFrame
 
 -- Status Label
 local statusLabel = Instance.new("TextLabel")
-statusLabel.Name = "StatusLabel"
 statusLabel.Size = UDim2.new(1, -40, 0, 30)
 statusLabel.Position = UDim2.new(0, 20, 0, 255)
 statusLabel.BackgroundTransparency = 1
-statsLabel.TextWrapped = true
 statusLabel.Text = "✅ Hazır!"
 statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
 statusLabel.TextSize = 14
 statusLabel.Font = Enum.Font.GothamBold
 statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+statusLabel.TextWrapped = true
 statusLabel.Parent = mainFrame
 
 -- Fonksiyonlar
-local function updateProgress(current, total, status)
+local function updateProgress(current, total)
 	local percent = math.floor((current / total) * 100)
-	progressBar:TweenSize(UDim2.new(percent / 100, 0, 1, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.1, true)
+	progressBar.Size = UDim2.new(percent / 100, 0, 1, 0)
 	percentLabel.Text = percent .. "%"
-	progressLabel.Text = status
 end
 
 local function updateStats(copied, total, elapsedTime, currentItem)
@@ -130,234 +128,189 @@ local function updateStats(copied, total, elapsedTime, currentItem)
 	statusLabel.Text = "🔍 " .. currentItem
 end
 
-local function getFullPath(instance)
-	local path = instance.Name
-	local parent = instance.Parent
-	while parent and parent ~= game do
-		path = parent.Name .. "/" .. path
-		parent = parent.Parent
-	end
-	return path
-end
-
-local function serializeValue(value)
-	local valueType = typeof(value)
-	
-	if valueType == "Vector3" then
-		return string.format("Vector3.new(%.3f, %.3f, %.3f)", value.X, value.Y, value.Z)
-	elseif valueType == "Color3" then
-		return string.format("Color3.fromRGB(%d, %d, %d)", math.floor(value.R * 255), math.floor(value.G * 255), math.floor(value.B * 255))
-	elseif valueType == "CFrame" then
-		local x, y, z = value.Position.X, value.Position.Y, value.Position.Z
-		return string.format("CFrame.new(%.3f, %.3f, %.3f)", x, y, z)
-	elseif valueType == "string" then
-		return '"' .. value .. '"'
-	else
+local function safeToString(value)
+	local success, result = pcall(function()
 		return tostring(value)
-	end
-end
-
-local function getAllProperties(instance)
-	local props = {}
-	local basicProps = {
-		"Name", "ClassName",
-		"Anchored", "CanCollide", "Transparency", "Material", "Color", "Size", "Position",
-		"TextureId", "MeshId", "SoundId", "AnimationId", "Value"
-	}
-	
-	for _, propName in pairs(basicProps) do
-		local success, value = pcall(function()
-			return instance[propName]
-		end)
-		if success and value ~= nil then
-			props[propName] = value
-		end
-	end
-	
-	return props
+	end)
+	return success and result or "ERR"
 end
 
 local function serializeInstance(instance)
 	local success, result = pcall(function()
 		local data = ""
+		local className = safeToString(instance.ClassName)
+		local name = safeToString(instance.Name)
 		
-		data = data .. "📦 " .. instance.ClassName .. ' "' .. instance.Name .. '"\n'
-		data = data .. "📍 " .. getFullPath(instance) .. "\n"
+		data = data .. "📦 " .. className .. ' "' .. name .. '"\n'
 		
-		-- Properties (sadece önemli olanlar)
-		local props = getAllProperties(instance)
+		-- Sadece temel bilgiler
+		local props = {}
+		pcall(function() props.Size = instance.Size end)
+		pcall(function() props.Position = instance.Position end)
+		pcall(function() props.Color = instance.Color end)
+		pcall(function() props.Material = instance.Material end)
+		pcall(function() props.Transparency = instance.Transparency end)
+		pcall(function() props.Anchored = instance.Anchored end)
+		
 		if next(props) then
 			data = data .. "⚙️  "
-			for propName, value in pairs(props) do
-				if typeof(value) ~= "Instance" then
-					data = data .. propName .. "=" .. serializeValue(value) .. " | "
-				end
+			for k, v in pairs(props) do
+				data = data .. k .. "=" .. safeToString(v) .. " | "
 			end
 			data = data .. "\n"
 		end
 		
-		-- Script source (ilk 200 karakter)
-		if instance:IsA("Script") or instance:IsA("LocalScript") or instance:IsA("ModuleScript") then
-			local source = instance.Source
-			if #source > 200 then
-				source = string.sub(source, 1, 200) .. "... [TRUNCATED]"
+		-- Script (kısa)
+		if className == "Script" or className == "LocalScript" or className == "ModuleScript" then
+			local sourceOk, source = pcall(function() return instance.Source end)
+			if sourceOk and source then
+				local shortSrc = string.sub(source, 1, 100)
+				data = data .. "📜 " .. shortSrc .. "...\n"
 			end
-			data = data .. "📜 " .. source .. "\n"
 		end
 		
 		data = data .. "\n"
 		return data
 	end)
 	
-	if success then
-		return result
-	else
-		return "❌ ERROR: " .. instance.ClassName .. " '" .. instance.Name .. "' - " .. tostring(result) .. "\n\n"
-	end
+	return success and result or ""
 end
 
--- TARAMA BAŞLAT
+-- TARAMA
 local function startScan()
 	local startTime = tick()
-	local fullData = "🔥 CRUSTY DATA COPIER - FULL GAME SCAN 🔥\n" .. string.rep("═", 63) .. "\n\n"
+	local fullData = "🔥 CRUSTY DATA COPIER 🔥\n" .. string.rep("=", 50) .. "\n\n"
 	
-	-- Tüm servisleri topla (sadece LocalScript'in erişebildikleri)
-	local services = {
-		{game.Workspace, "Workspace"},
-		{game.ReplicatedStorage, "ReplicatedStorage"},
-		{game.Lighting, "Lighting"},
-		{game.StarterGui, "StarterGui"},
-		{game.StarterPlayer, "StarterPlayer"},
-		{game.Players, "Players"}
+	-- Güvenli servisler
+	local services = {}
+	
+	local serviceNames = {
+		"Workspace",
+		"ReplicatedStorage", 
+		"Lighting",
+		"Players"
 	}
 	
-	-- Opsiyonel servisler (hata verirse atla)
-	local optionalServices = {
-		"ReplicatedFirst",
-		"SoundService",
-		"Teams",
-		"Chat"
-	}
-	
-	for _, serviceName in pairs(optionalServices) do
-		local success, service = pcall(function()
-			return game:GetService(serviceName)
+	for _, sName in pairs(serviceNames) do
+		local suc, serv = pcall(function()
+			return game:GetService(sName)
 		end)
-		if success and service then
-			table.insert(services, {service, serviceName})
+		if suc and serv then
+			table.insert(services, {serv, sName})
 		end
 	end
 	
-	-- Toplam obje sayısını hızlıca hesapla
+	-- Toplam hesapla
 	local totalObjects = 0
-	for _, serviceData in pairs(services) do
-		local success, count = pcall(function()
-			return #serviceData[1]:GetDescendants()
+	for _, sData in pairs(services) do
+		local suc, descs = pcall(function()
+			return sData[1]:GetDescendants()
 		end)
-		if success then
-			totalObjects = totalObjects + count
+		if suc and descs then
+			totalObjects = totalObjects + #descs
 		end
 	end
 	
 	local copiedObjects = 0
 	local errorCount = 0
-	local lastUpdate = tick()
+	local lastUpdate = 0
 	
-	-- Her servisi tara
-	for _, serviceData in pairs(services) do
-		local service = serviceData[1]
-		local serviceName = serviceData[2]
+	-- Tara
+	for _, sData in pairs(services) do
+		local service = sData[1]
+		local serviceName = sData[2]
 		
-		fullData = fullData .. "\n🗂️  " .. serviceName .. "\n" .. string.rep("─", 40) .. "\n"
+		fullData = fullData .. "\n🗂️  " .. serviceName .. "\n" .. string.rep("-", 30) .. "\n"
 		
-		local success, descendants = pcall(function()
+		local suc, descs = pcall(function()
 			return service:GetDescendants()
 		end)
 		
-		if success then
-			for i, descendant in pairs(descendants) do
-				-- Hata yönetimi ile veriyi ekle
-				local data = serializeInstance(descendant)
-				if string.find(data, "❌ ERROR") then
+		if suc and descs then
+			for i, desc in pairs(descs) do
+				local data = serializeInstance(desc)
+				if data == "" then
 					errorCount = errorCount + 1
+				else
+					fullData = fullData .. data
 				end
-				fullData = fullData .. data
 				
 				copiedObjects = copiedObjects + 1
 				
-				-- UI'yi her 0.1 saniyede bir güncelle (performans için)
 				local now = tick()
-				if now - lastUpdate >= 0.1 then
+				if now - lastUpdate >= 0.15 then
 					local elapsed = now - startTime
-					updateProgress(copiedObjects, totalObjects, "Taranıyor: " .. serviceName)
-					updateStats(copiedObjects, totalObjects, elapsed, descendant.ClassName .. ' "' .. descendant.Name .. '"')
+					local itemName = "..."
+					pcall(function()
+						itemName = desc.ClassName .. " " .. desc.Name
+					end)
+					
+					progressLabel.Text = "Taranıyor: " .. serviceName
+					updateProgress(copiedObjects, totalObjects)
+					updateStats(copiedObjects, totalObjects, elapsed, itemName)
 					lastUpdate = now
 				end
 				
-				-- Her 100 objede bir bekle (daha az lag)
-				if i % 100 == 0 then
+				if i % 150 == 0 then
 					task.wait()
 				end
 			end
 		else
-			fullData = fullData .. "❌ SERVICE ERROR: " .. serviceName .. " - " .. tostring(descendants) .. "\n\n"
 			errorCount = errorCount + 1
 		end
 	end
 	
 	-- Özet
 	local totalTime = tick() - startTime
-	fullData = fullData .. "\n" .. string.rep("═", 63) .. "\n"
-	fullData = fullData .. "✅ TARAMA TAMAMLANDI!\n"
-	fullData = fullData .. "📦 Kopyalanan: " .. copiedObjects .. " / " .. totalObjects .. "\n"
+	fullData = fullData .. "\n" .. string.rep("=", 50) .. "\n"
+	fullData = fullData .. "✅ TAMAMLANDI!\n"
+	fullData = fullData .. "📦 Kopyalanan: " .. copiedObjects .. "\n"
 	fullData = fullData .. "❌ Hatalar: " .. errorCount .. "\n"
 	fullData = fullData .. "⏱️ Süre: " .. string.format("%.2f", totalTime) .. "s\n"
-	fullData = fullData .. "📅 " .. os.date("%Y-%m-%d %H:%M:%S") .. "\n"
-	fullData = fullData .. string.rep("═", 63) .. "\n"
+	fullData = fullData .. string.rep("=", 50) .. "\n"
 	
 	-- Kaydet
-	local saveSuccess = false
+	local saved = false
+	
 	if setclipboard then
-		local success = pcall(function()
+		pcall(function()
 			setclipboard(fullData)
-		end)
-		if success then
-			statusLabel.Text = "✅ Panoya kopyalandı! CTRL+V"
+			statusLabel.Text = "✅ PANOYA KOPYALANDI! CTRL+V YAP!"
 			statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
-			saveSuccess = true
-		end
+			saved = true
+		end)
 	end
 	
-	if not saveSuccess and writefile then
-		local success = pcall(function()
+	if not saved and writefile then
+		pcall(function()
 			writefile("crusty_game_copy.txt", fullData)
-		end)
-		if success then
-			statusLabel.Text = "✅ crusty_game_copy.txt kaydedildi!"
+			statusLabel.Text = "✅ DOSYAYA KAYDEDİLDİ! crusty_game_copy.txt"
 			statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
-			saveSuccess = true
-		end
+			saved = true
+		end)
 	end
 	
-	if not saveSuccess then
-		statusLabel.Text = "⚠️ Output'a yazdırılıyor..."
+	if not saved then
+		statusLabel.Text = "⚠️ OUTPUT'A YAZILDI! KONSOLA BAK!"
 		statusLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
 		print(fullData)
 	end
 	
-	updateProgress(totalObjects, totalObjects, "✅ Tamamlandı!")
-	updateStats(copiedObjects, totalObjects, totalTime, "Bitti! " .. errorCount .. " hata atlandı.")
+	updateProgress(totalObjects, totalObjects)
+	progressLabel.Text = "✅ BİTTİ!"
 	
-	print("✅ CRUSTY DATA COPIER TAMAMLANDI!")
-	print("📦 " .. copiedObjects .. " / " .. totalObjects .. " obje kopyalandı")
+	print("✅ CRUSTY DATA COPIER BİTTİ!")
+	print("📦 " .. copiedObjects .. " obje kopyalandı")
 	print("❌ " .. errorCount .. " hata atlandı")
-	print("⏱️ " .. string.format("%.2f", totalTime) .. " saniye")
 	
-	-- 5 saniye sonra UI'yi kapat
 	task.wait(5)
-	screenGui:Destroy()
+	pcall(function()
+		screenGui:Destroy()
+	end)
 end
 
--- Başlat
-task.wait(0.5)
-startScan()
+-- BAŞLAT
+task.spawn(function()
+	task.wait(0.5)
+	pcall(startScan)
+end)
