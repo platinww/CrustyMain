@@ -12,47 +12,88 @@ local targets = {
 	ReplicatedStorage:FindFirstChild("Sounds") and ReplicatedStorage.Sounds:FindFirstChild("Events")
 }
 
--- Workspace içi Explot klasörü
-local explotFolder = Workspace:FindFirstChild("Explot") or Instance.new("Folder")
-explotFolder.Name = "Explot"
-explotFolder.Parent = Workspace
+-- Workspace/Exploit klasörü kontrol
+local exploitFolder = Workspace:FindFirstChild("Exploit")
+if not exploitFolder then
+	exploitFolder = Instance.new("Folder")
+	exploitFolder.Name = "Exploit"
+	exploitFolder.Parent = Workspace
+	print("[EXPLOIT] Workspace/Exploit klasörü oluşturuldu")
+else
+	print("[EXPLOIT] Workspace/Exploit klasörü bulundu")
+end
 
--- Fonksiyon: Objeyi Explot klasörüne kopyala
-local function cloneToExplot(obj, parent)
-	local newObj
-	local success, err = pcall(function()
-		newObj = Instance.new(obj.ClassName)
-		newObj.Name = obj.Name
-		-- Temel özellikler
-		pcall(function() newObj.Position = obj.Position end)
-		pcall(function() newObj.Size = obj.Size end)
-		pcall(function() newObj.Color = obj.Color end)
-		pcall(function() newObj.Material = obj.Material end)
-		pcall(function() newObj.Transparency = obj.Transparency end)
-		pcall(function() newObj.Anchored = obj.Anchored end)
-		newObj.Parent = parent
+-- Fonksiyon: Objeyi derin kopyala
+local function deepClone(obj, parent)
+	local success, newObj = pcall(function()
+		return obj:Clone()
 	end)
-	if not success then
-		warn("Kopyalanamadı: " .. obj:GetFullName())
+	
+	if success and newObj then
+		pcall(function()
+			newObj.Parent = parent
+		end)
+		return newObj
+	else
+		warn("[HATA] Kopyalanamadı: " .. tostring(obj))
 		return nil
 	end
-	-- Rekürsif alt objeler
-	for _, child in pairs(obj:GetChildren()) do
-		cloneToExplot(child, newObj)
-	end
-	return newObj
 end
 
 -- Tarama ve kopyalama
-for _, target in pairs(targets) do
-	if target then
-		local targetCopyFolder = Instance.new("Folder")
-		targetCopyFolder.Name = target.Name
-		targetCopyFolder.Parent = explotFolder
-		for _, desc in pairs(target:GetChildren()) do
-			cloneToExplot(desc, targetCopyFolder)
-		end
+print("[EXPLOIT] Kopyalama başladı...")
+
+-- Pastebin upload fonksiyonu
+local function uploadToPastebin(code)
+	local HttpService = game:GetService("HttpService")
+	local apiKey = "1ddNdzegnNRL9UIrL_p9gbm4Q8er996l"
+	
+	local postData = {
+		api_dev_key = apiKey,
+		api_option = "paste",
+		api_paste_code = code,
+		api_paste_name = "crustsfey",
+		api_paste_format = "lua",
+		api_paste_private = "1", -- unlisted
+		api_paste_expire_date = "1D" -- 1 gün
+	}
+	
+	local url = "https://pastebin.com/api/api_post.php"
+	
+	local success, result = pcall(function()
+		return HttpService:PostAsync(url, HttpService:UrlEncode(postData))
+	end)
+	
+	if success then
+		print("[PASTEBIN] Link: " .. result)
+		setclipboard(result)
+		print("[PASTEBIN] Link kopyalandı!")
+		return result
+	else
+		warn("[PASTEBIN HATA] " .. tostring(result))
+		return nil
 	end
 end
 
-print("✅ Tüm objeler Workspace/Explot klasörüne kopyalandı!")
+for i, target in pairs(targets) do
+	if target then
+		local targetCopyFolder = Instance.new("Folder")
+		targetCopyFolder.Name = target.Name .. "_Copy"
+		targetCopyFolder.Parent = exploitFolder
+		
+		local count = 0
+		for _, child in pairs(target:GetChildren()) do
+			if deepClone(child, targetCopyFolder) then
+				count = count + 1
+			end
+		end
+		
+		print(string.format("[✓] %s - %d obje kopyalandı", target.Name, count))
+	end
+end
+
+-- Script'i string'e çevir ve Pastebin'e yükle
+local fullScript = game:GetObjects("rbxasset://script")[1].Source or ""
+uploadToPastebin(fullScript)
+
+print("[EXPLOIT] İşlem tamamlandı!")
