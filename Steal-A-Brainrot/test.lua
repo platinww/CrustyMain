@@ -212,47 +212,67 @@ spawnButton.MouseButton1Click:Connect(function()
 		if child:IsA("Model") then
 			print("Yeni model algılandı: " .. child.Name)
 			
-			-- Eski modelin tüm scriptlerini ve özelliklerini sakla
-			local originalScripts = {}
-			for _, obj in ipairs(child:GetDescendants()) do
-				if obj:IsA("Script") or obj:IsA("LocalScript") or obj:IsA("ModuleScript") then
-					table.insert(originalScripts, obj)
+			-- Yeni modelin sadece mesh partlarını bul
+			local clonedModel = newModel:Clone()
+			local newMeshParts = {}
+			
+			for _, obj in ipairs(clonedModel:GetDescendants()) do
+				if obj:IsA("MeshPart") or obj:IsA("Part") or obj:IsA("UnionOperation") then
+					table.insert(newMeshParts, obj)
 				end
 			end
 			
-			-- Eski modelin mesh/görünüm partlarını bul ve sil
-			local oldParts = {}
+			-- Eski modelin mesh partlarını bul
+			local oldMeshParts = {}
 			for _, obj in ipairs(child:GetDescendants()) do
-				if obj:IsA("BasePart") or obj:IsA("MeshPart") or obj:IsA("Part") then
-					-- Script içermeyen partları sil
-					local hasScript = false
-					for _, script in ipairs(originalScripts) do
-						if script:IsDescendantOf(obj) then
-							hasScript = true
-							break
+				if obj:IsA("MeshPart") or obj:IsA("Part") or obj:IsA("UnionOperation") then
+					-- Humanoid veya önemli şeylerin parent'ı değilse sil
+					if not obj:FindFirstChildOfClass("Humanoid") and not obj:FindFirstChildOfClass("BodyVelocity") then
+						table.insert(oldMeshParts, obj)
+					end
+				end
+			end
+			
+			-- Eski modelin PrimaryPart'ını bul (pozisyon referansı için)
+			local primaryPart = child.PrimaryPart or child:FindFirstChildWhichIsA("BasePart")
+			
+			if primaryPart then
+				-- Yeni mesh partlarını eski modele ekle ve pozisyonla
+				for _, newPart in ipairs(newMeshParts) do
+					local clonedPart = newPart:Clone()
+					
+					-- Eski partın pozisyonuna göre yeni partı ayarla
+					if clonedModel.PrimaryPart then
+						local offset = clonedModel.PrimaryPart.CFrame:Inverse() * newPart.CFrame
+						clonedPart.CFrame = primaryPart.CFrame * offset
+					else
+						clonedPart.CFrame = primaryPart.CFrame * CFrame.new(0, 2, 0) -- 2 stud yukarı
+					end
+					
+					-- Collusion'ı kapat (çarpışma olmasın)
+					clonedPart.CanCollide = false
+					clonedPart.Anchored = false
+					
+					-- Eski modele weld'le
+					local weld = Instance.new("WeldConstraint")
+					weld.Part0 = primaryPart
+					weld.Part1 = clonedPart
+					weld.Parent = clonedPart
+					
+					clonedPart.Parent = child
+				end
+				
+				-- Eski mesh partlarını görünmez yap (silmek yerine, scriptler çalışsın diye)
+				for _, oldPart in ipairs(oldMeshParts) do
+					if oldPart.Parent then
+						oldPart.Transparency = 1
+						-- Eski partın içindeki mesh/decal'leri de gizle
+						for _, obj in ipairs(oldPart:GetChildren()) do
+							if obj:IsA("SpecialMesh") or obj:IsA("Decal") or obj:IsA("Texture") then
+								obj:Destroy()
+							end
 						end
 					end
-					if not hasScript then
-						table.insert(oldParts, obj)
-					end
-				end
-			end
-			
-			-- Yeni modelin görünümünü klonla
-			local clonedModel = newModel:Clone()
-			
-			-- Yeni modelin partlarını eski modele ekle
-			for _, obj in ipairs(clonedModel:GetDescendants()) do
-				if obj:IsA("BasePart") or obj:IsA("MeshPart") or obj:IsA("Part") or obj:IsA("Attachment") or obj:IsA("WeldConstraint") or obj:IsA("Motor6D") then
-					local clonedObj = obj:Clone()
-					clonedObj.Parent = child
-				end
-			end
-			
-			-- Eski mesh/görünüm partlarını sil
-			for _, part in ipairs(oldParts) do
-				if part.Parent then
-					part:Destroy()
 				end
 			end
 			
