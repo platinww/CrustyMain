@@ -1,5 +1,134 @@
--- ULTRA Workspace Kopyalayıcı LocalScript
--- Tüm detayları kopyalar
+-- Crusty Data Copier - Full Game Scanner
+-- Tüm oyunu tarar ve kopyalar
+
+local player = game.Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- UI Oluştur
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "CrustyDataCopier"
+screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+screenGui.Parent = playerGui
+
+-- Ana Frame
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 500, 0, 300)
+mainFrame.Position = UDim2.new(0.5, -250, 0.5, -150)
+mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+mainFrame.BorderSizePixel = 0
+mainFrame.Parent = screenGui
+
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0, 15)
+mainCorner.Parent = mainFrame
+
+-- Header
+local header = Instance.new("TextLabel")
+header.Name = "Header"
+header.Size = UDim2.new(1, 0, 0, 60)
+header.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+header.BorderSizePixel = 0
+header.Text = "🔥 Crusty Data Copier 🔥"
+header.TextColor3 = Color3.fromRGB(255, 100, 100)
+header.TextSize = 24
+header.Font = Enum.Font.GothamBold
+header.Parent = mainFrame
+
+local headerCorner = Instance.new("UICorner")
+headerCorner.CornerRadius = UDim.new(0, 15)
+headerCorner.Parent = header
+
+-- Progress Label
+local progressLabel = Instance.new("TextLabel")
+progressLabel.Name = "ProgressLabel"
+progressLabel.Size = UDim2.new(1, -40, 0, 30)
+progressLabel.Position = UDim2.new(0, 20, 0, 80)
+progressLabel.BackgroundTransparency = 1
+progressLabel.Text = "Hazırlanıyor..."
+progressLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+progressLabel.TextSize = 18
+progressLabel.Font = Enum.Font.Gotham
+progressLabel.TextXAlignment = Enum.TextXAlignment.Left
+progressLabel.Parent = mainFrame
+
+-- Progress Bar Arka Plan
+local progressBg = Instance.new("Frame")
+progressBg.Name = "ProgressBg"
+progressBg.Size = UDim2.new(1, -40, 0, 30)
+progressBg.Position = UDim2.new(0, 20, 0, 120)
+progressBg.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+progressBg.BorderSizePixel = 0
+progressBg.Parent = mainFrame
+
+local progressBgCorner = Instance.new("UICorner")
+progressBgCorner.CornerRadius = UDim.new(0, 8)
+progressBgCorner.Parent = progressBg
+
+-- Progress Bar
+local progressBar = Instance.new("Frame")
+progressBar.Name = "ProgressBar"
+progressBar.Size = UDim2.new(0, 0, 1, 0)
+progressBar.BackgroundColor3 = Color3.fromRGB(100, 200, 100)
+progressBar.BorderSizePixel = 0
+progressBar.Parent = progressBg
+
+local progressBarCorner = Instance.new("UICorner")
+progressBarCorner.CornerRadius = UDim.new(0, 8)
+progressBarCorner.Parent = progressBar
+
+-- Percent Label
+local percentLabel = Instance.new("TextLabel")
+percentLabel.Name = "PercentLabel"
+percentLabel.Size = UDim2.new(1, 0, 1, 0)
+percentLabel.BackgroundTransparency = 1
+percentLabel.Text = "0%"
+percentLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+percentLabel.TextSize = 16
+percentLabel.Font = Enum.Font.GothamBold
+percentLabel.Parent = progressBg
+
+-- Stats Label
+local statsLabel = Instance.new("TextLabel")
+statsLabel.Name = "StatsLabel"
+statsLabel.Size = UDim2.new(1, -40, 0, 80)
+statsLabel.Position = UDim2.new(0, 20, 0, 160)
+statsLabel.BackgroundTransparency = 1
+statsLabel.Text = "📦 Kopyalanan: 0\n📂 Toplam: 0\n⏱️ Süre: 0s"
+statsLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+statsLabel.TextSize = 16
+statsLabel.Font = Enum.Font.Gotham
+statsLabel.TextXAlignment = Enum.TextXAlignment.Left
+statsLabel.TextYAlignment = Enum.TextYAlignment.Top
+statsLabel.Parent = mainFrame
+
+-- Status Label
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Name = "StatusLabel"
+statusLabel.Size = UDim2.new(1, -40, 0, 30)
+statusLabel.Position = UDim2.new(0, 20, 0, 255)
+statusLabel.BackgroundTransparency = 1
+statsLabel.TextWrapped = true
+statusLabel.Text = "✅ Hazır!"
+statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+statusLabel.TextSize = 14
+statusLabel.Font = Enum.Font.GothamBold
+statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+statusLabel.Parent = mainFrame
+
+-- Fonksiyonlar
+local function updateProgress(current, total, status)
+	local percent = math.floor((current / total) * 100)
+	progressBar:TweenSize(UDim2.new(percent / 100, 0, 1, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.1, true)
+	percentLabel.Text = percent .. "%"
+	progressLabel.Text = status
+end
+
+local function updateStats(copied, total, elapsedTime, currentItem)
+	statsLabel.Text = string.format("📦 Kopyalanan: %d\n📂 Toplam: %d\n⏱️ Süre: %.1fs", copied, total, elapsedTime)
+	statusLabel.Text = "🔍 " .. currentItem
+end
 
 local function getFullPath(instance)
 	local path = instance.Name
@@ -17,19 +146,12 @@ local function serializeValue(value)
 	if valueType == "Vector3" then
 		return string.format("Vector3.new(%.3f, %.3f, %.3f)", value.X, value.Y, value.Z)
 	elseif valueType == "Color3" then
-		return string.format("Color3.fromRGB(%d, %d, %d)", value.R * 255, value.G * 255, value.B * 255)
+		return string.format("Color3.fromRGB(%d, %d, %d)", math.floor(value.R * 255), math.floor(value.G * 255), math.floor(value.B * 255))
 	elseif valueType == "CFrame" then
 		local x, y, z = value.Position.X, value.Position.Y, value.Position.Z
-		local rx, ry, rz = value:ToOrientation()
-		return string.format("CFrame.new(%.3f, %.3f, %.3f) * CFrame.Angles(%.3f, %.3f, %.3f)", x, y, z, rx, ry, rz)
-	elseif valueType == "UDim2" then
-		return string.format("UDim2.new(%.3f, %d, %.3f, %d)", value.X.Scale, value.X.Offset, value.Y.Scale, value.Y.Offset)
-	elseif valueType == "BrickColor" then
-		return "BrickColor.new(\"" .. tostring(value) .. "\")"
-	elseif valueType == "EnumItem" then
-		return "Enum." .. tostring(value)
+		return string.format("CFrame.new(%.3f, %.3f, %.3f)", x, y, z)
 	elseif valueType == "string" then
-		return "\"" .. value .. "\""
+		return '"' .. value .. '"'
 	else
 		return tostring(value)
 	end
@@ -37,26 +159,14 @@ end
 
 local function getAllProperties(instance)
 	local props = {}
-	local success, properties = pcall(function()
-		return game:GetService("HttpService"):JSONDecode(game:GetService("HttpService"):GetAsync("https://raw.githubusercontent.com/MaximumADHD/Roblox-Client-Tracker/roblox/API-Dump.json"))
-	end)
-	
-	-- Temel property'ler
 	local basicProps = {
-		"Name", "ClassName", "Parent",
-		"Anchored", "CanCollide", "Transparency", "Reflectance", "Material", "BrickColor", "Color",
-		"Size", "Position", "Orientation", "CFrame", "Rotation",
-		"Texture", "TextureId", "MeshId", "Scale", "Offset", "VertexColor",
-		"Volume", "Pitch", "SoundId", "Looped", "PlaybackSpeed", "RollOffMode", "RollOffMaxDistance", "RollOffMinDistance",
-		"AnimationId", "TimePosition", "Playing",
-		"Velocity", "MaxForce", "P", "D", "MaxVelocity",
-		"Text", "TextColor3", "TextSize", "Font", "BackgroundColor3", "BorderColor3", "BackgroundTransparency",
-		"Value", "Enabled", "Brightness", "Range", "Shadows", "Face", "Angle",
-		"MaxSpeed", "Acceleration", "Friction", "WalkSpeed", "JumpPower", "Health", "MaxHealth",
-		"C0", "C1", "Part0", "Part1",
-		"Target", "MaxDistance", "Restitution",
-		"Image", "ImageColor3", "ImageTransparency", "ScaleType",
-		"ZIndex", "Visible", "ClipsDescendants"
+		"Name", "ClassName",
+		"Anchored", "CanCollide", "Transparency", "Material", "Color", "Size", "Position", "CFrame",
+		"Texture", "TextureId", "MeshId", "Scale",
+		"Volume", "Pitch", "SoundId", "Looped", "PlaybackSpeed",
+		"AnimationId", "Velocity", "MaxForce", "P",
+		"Text", "TextColor3", "TextSize", "Font", "BackgroundColor3",
+		"Value", "Enabled", "Brightness", "Range"
 	}
 	
 	for _, propName in pairs(basicProps) do
@@ -64,141 +174,141 @@ local function getAllProperties(instance)
 			return instance[propName]
 		end)
 		if success and value ~= nil then
-			-- Parent'i atlama (sonsuz döngü olmasın)
-			if propName ~= "Parent" or (propName == "Parent" and value) then
-				props[propName] = value
-			end
+			props[propName] = value
 		end
 	end
 	
 	return props
 end
 
-local function serializeInstance(instance, indent, visitedTables)
-	indent = indent or ""
-	visitedTables = visitedTables or {}
-	
-	if visitedTables[instance] then
-		return indent .. "⚠️ [ALREADY VISITED: " .. instance.Name .. "]\n"
-	end
-	visitedTables[instance] = true
-	
+local function serializeInstance(instance)
 	local result = ""
-	local separator = "═══════════════════════════════════════════════════════════════\n"
+	local separator = "─────────────────────────────────────────────\n"
 	
-	-- Header
-	result = result .. indent .. separator
-	result = result .. indent .. "📦 INSTANCE: " .. instance.ClassName .. "\n"
-	result = result .. indent .. "📍 NAME: " .. instance.Name .. "\n"
-	result = result .. indent .. "🗂️  FULL PATH: " .. getFullPath(instance) .. "\n"
-	result = result .. indent .. separator
+	result = result .. separator
+	result = result .. "📦 " .. instance.ClassName .. ' "' .. instance.Name .. '"\n'
+	result = result .. "📍 Path: " .. getFullPath(instance) .. "\n"
 	
-	-- Properties
-	result = result .. indent .. "⚙️  PROPERTIES:\n"
 	local props = getAllProperties(instance)
-	local sortedProps = {}
-	for k in pairs(props) do
-		table.insert(sortedProps, k)
-	end
-	table.sort(sortedProps)
-	
-	for _, propName in pairs(sortedProps) do
-		local value = props[propName]
-		if typeof(value) == "Instance" then
-			result = result .. indent .. "  • " .. propName .. ": [Instance] " .. value.ClassName .. " '" .. value.Name .. "'\n"
-		else
-			result = result .. indent .. "  • " .. propName .. ": " .. serializeValue(value) .. "\n"
+	if next(props) then
+		result = result .. "⚙️  Properties:\n"
+		for propName, value in pairs(props) do
+			if typeof(value) == "Instance" then
+				result = result .. "  • " .. propName .. ": [" .. value.ClassName .. "] " .. value.Name .. "\n"
+			else
+				result = result .. "  • " .. propName .. ": " .. serializeValue(value) .. "\n"
+			end
 		end
 	end
 	
-	-- Script Source
 	if instance:IsA("Script") or instance:IsA("LocalScript") or instance:IsA("ModuleScript") then
-		result = result .. indent .. "\n"
-		result = result .. indent .. "📜 SOURCE CODE:\n"
-		result = result .. indent .. "```lua\n"
-		local sourceLines = string.split(instance.Source, "\n")
-		for i, line in pairs(sourceLines) do
-			result = result .. indent .. string.format("%3d | %s\n", i, line)
-		end
-		result = result .. indent .. "```\n"
+		result = result .. "📜 Source:\n```lua\n" .. instance.Source .. "\n```\n"
 	end
 	
-	-- Tags
-	local tags = instance:GetTags()
-	if #tags > 0 then
-		result = result .. indent .. "\n"
-		result = result .. indent .. "🏷️  TAGS: " .. table.concat(tags, ", ") .. "\n"
-	end
-	
-	-- Attributes
-	local attributes = instance:GetAttributes()
-	if next(attributes) then
-		result = result .. indent .. "\n"
-		result = result .. indent .. "📎 ATTRIBUTES:\n"
-		for attrName, attrValue in pairs(attributes) do
-			result = result .. indent .. "  • " .. attrName .. ": " .. tostring(attrValue) .. "\n"
-		end
-	end
-	
-	-- Children
 	local children = instance:GetChildren()
 	if #children > 0 then
-		result = result .. indent .. "\n"
-		result = result .. indent .. "👶 CHILDREN (" .. #children .. "):\n"
-		result = result .. indent .. "├─────────────────────────────────────────────────────────\n"
-		for i, child in pairs(children) do
-			local prefix = i == #children and "└─ " or "├─ "
-			local childIndent = i == #children and "   " or "│  "
-			result = result .. indent .. prefix .. child.ClassName .. ' "' .. child.Name .. '"\n'
-			result = result .. serializeInstance(child, indent .. childIndent, visitedTables)
-		end
+		result = result .. "👶 Children: " .. #children .. "\n"
 	end
 	
 	result = result .. "\n"
 	return result
 end
 
--- ANA IŞLEM
-print("🚀 Workspace kopyalama başlatılıyor...")
-wait(0.5)
-
-local fullData = [[
+-- TARAMA BAŞLAT
+local function startScan()
+	local startTime = tick()
+	local fullData = [[
 ╔═══════════════════════════════════════════════════════════════╗
-║           🎮 ROBLOX WORKSPACE FULL COPY 🎮                    ║
-║              Tüm Detaylar Dahil                               ║
+║           🔥 CRUSTY DATA COPIER - FULL GAME SCAN 🔥          ║
 ╚═══════════════════════════════════════════════════════════════╝
 
 ]]
-
-local totalObjects = 0
-
-for _, child in pairs(workspace:GetChildren()) do
-	-- Kamera ve Terrain'i atlama
-	if child.Name ~= "Camera" and child.Name ~= "Terrain" then
-		fullData = fullData .. serializeInstance(child)
-		totalObjects = totalObjects + 1
+	
+	-- Tüm servisleri topla
+	local services = {
+		game.Workspace,
+		game.ReplicatedStorage,
+		game.ServerStorage,
+		game.ReplicatedFirst,
+		game.Lighting,
+		game.SoundService,
+		game.StarterGui,
+		game.StarterPack,
+		game.StarterPlayer,
+		game.Teams
+	}
+	
+	-- Toplam obje sayısını hesapla
+	local totalObjects = 0
+	for _, service in pairs(services) do
+		for _, descendant in pairs(service:GetDescendants()) do
+			totalObjects = totalObjects + 1
+		end
 	end
+	
+	local copiedObjects = 0
+	
+	-- Her servisi tara
+	for _, service in pairs(services) do
+		fullData = fullData .. "\n\n" .. string.rep("═", 63) .. "\n"
+		fullData = fullData .. "🗂️  SERVICE: " .. service.Name .. "\n"
+		fullData = fullData .. string.rep("═", 63) .. "\n\n"
+		
+		local descendants = service:GetDescendants()
+		
+		for i, descendant in pairs(descendants) do
+			-- UI Güncelle
+			copiedObjects = copiedObjects + 1
+			local elapsed = tick() - startTime
+			updateProgress(copiedObjects, totalObjects, "Taranıyor: " .. service.Name)
+			updateStats(copiedObjects, totalObjects, elapsed, descendant.ClassName .. ' "' .. descendant.Name .. '"')
+			
+			-- Veriyi ekle
+			fullData = fullData .. serializeInstance(descendant)
+			
+			-- Her 50 objede bir bekle (lag olmasın)
+			if i % 50 == 0 then
+				task.wait()
+			end
+		end
+	end
+	
+	-- Özet
+	local totalTime = tick() - startTime
+	fullData = fullData .. "\n" .. string.rep("═", 63) .. "\n"
+	fullData = fullData .. "✅ TARAMA TAMAMLANDI!\n"
+	fullData = fullData .. "📦 Toplam Obje: " .. totalObjects .. "\n"
+	fullData = fullData .. "⏱️ Toplam Süre: " .. string.format("%.2f", totalTime) .. " saniye\n"
+	fullData = fullData .. "📅 Tarih: " .. os.date("%Y-%m-%d %H:%M:%S") .. "\n"
+	fullData = fullData .. string.rep("═", 63) .. "\n"
+	
+	-- Kaydet
+	if setclipboard then
+		setclipboard(fullData)
+		statusLabel.Text = "✅ Panoya kopyalandı! CTRL+V ile yapıştır!"
+		statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+	elseif writefile then
+		writefile("crusty_game_copy.txt", fullData)
+		statusLabel.Text = "✅ Dosyaya kaydedildi! (crusty_game_copy.txt)"
+		statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+	else
+		statusLabel.Text = "⚠️ setclipboard/writefile yok! Output'a yazdırılıyor..."
+		statusLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
+		print(fullData)
+	end
+	
+	updateProgress(totalObjects, totalObjects, "✅ Tamamlandı!")
+	updateStats(copiedObjects, totalObjects, totalTime, "Bitti!")
+	
+	print("✅✅✅ CRUSTY DATA COPIER TAMAMLANDI!")
+	print("📦 " .. totalObjects .. " obje kopyalandı!")
+	print("⏱️ " .. string.format("%.2f", totalTime) .. " saniye sürdü!")
+	
+	-- 3 saniye sonra UI'yi kapat
+	task.wait(3)
+	screenGui:Destroy()
 end
 
-fullData = fullData .. "\n" .. string.rep("═", 63) .. "\n"
-fullData = fullData .. "✅ TOPLAM OBJE: " .. totalObjects .. "\n"
-fullData = fullData .. "📅 TARİH: " .. os.date("%Y-%m-%d %H:%M:%S") .. "\n"
-fullData = fullData .. string.rep("═", 63) .. "\n"
-
--- Panoya kopyala
-if setclipboard then
-	setclipboard(fullData)
-	print("✅ Workspace panoya kopyalandı! (setclipboard)")
-	print("📋 Toplam " .. totalObjects .. " obje kopyalandı!")
-	print("👉 Şimdi CTRL+V yaparak yapıştırabilirsin!")
-elseif writefile then
-	writefile("workspace_copy.txt", fullData)
-	print("✅ Workspace dosyaya kaydedildi! (workspace_copy.txt)")
-	print("📋 Toplam " .. totalObjects .. " obje kopyalandı!")
-	print("👉 Exploit klasöründen 'workspace_copy.txt' dosyasını aç!")
-else
-	print("⚠️ setclipboard/writefile bulunamadı. Output'tan kopyala:")
-	print(fullData)
-end
-
-print("✅✅✅ İşlem tamamlandı!")
+-- Başlat
+task.wait(0.5)
+startScan()
