@@ -205,105 +205,18 @@ spawnButton.MouseButton1Click:Connect(function()
 		return
 	end
 	
-	-- RenderedMovingAnimals içindeki modeli değiştir
-	-- Yeni oluşan ilk modeli bekle ve değiştir
-	local connection
-	connection = renderedFolder.ChildAdded:Connect(function(child)
-		if child:IsA("Model") then
-			print("Yeni model algılandı: " .. child.Name)
-			
-			-- Yeni modelin sadece mesh partlarını bul
-			local clonedModel = newModel:Clone()
-			local newMeshParts = {}
-			
-			for _, obj in ipairs(clonedModel:GetDescendants()) do
-				if obj:IsA("MeshPart") or obj:IsA("Part") or obj:IsA("UnionOperation") then
-					table.insert(newMeshParts, obj)
-				end
-			end
-			
-			-- Eski modelin mesh partlarını bul
-			local oldMeshParts = {}
-			for _, obj in ipairs(child:GetDescendants()) do
-				if obj:IsA("MeshPart") or obj:IsA("Part") or obj:IsA("UnionOperation") then
-					-- Humanoid veya önemli şeylerin parent'ı değilse sil
-					if not obj:FindFirstChildOfClass("Humanoid") and not obj:FindFirstChildOfClass("BodyVelocity") then
-						table.insert(oldMeshParts, obj)
-					end
-				end
-			end
-			
-			-- Eski modelin PrimaryPart'ını bul (pozisyon referansı için)
-			local primaryPart = child.PrimaryPart or child:FindFirstChildWhichIsA("BasePart")
-			
-			if primaryPart then
-				-- Yeni mesh partlarını eski modele ekle ve pozisyonla
-				for _, newPart in ipairs(newMeshParts) do
-					local clonedPart = newPart:Clone()
-					
-					-- Eski partın pozisyonuna göre yeni partı ayarla
-					if clonedModel.PrimaryPart then
-						local offset = clonedModel.PrimaryPart.CFrame:Inverse() * newPart.CFrame
-						clonedPart.CFrame = primaryPart.CFrame * offset
-					else
-						clonedPart.CFrame = primaryPart.CFrame * CFrame.new(0, 2, 0) -- 2 stud yukarı
-					end
-					
-					-- Collusion'ı kapat (çarpışma olmasın)
-					clonedPart.CanCollide = false
-					clonedPart.Anchored = false
-					
-					-- Eski modele weld'le
-					local weld = Instance.new("WeldConstraint")
-					weld.Part0 = primaryPart
-					weld.Part1 = clonedPart
-					weld.Parent = clonedPart
-					
-					clonedPart.Parent = child
-				end
-				
-				-- Eski mesh partlarını görünmez yap (silmek yerine, scriptler çalışsın diye)
-				for _, oldPart in ipairs(oldMeshParts) do
-					if oldPart.Parent then
-						oldPart.Transparency = 1
-						-- Eski partın içindeki mesh/decal'leri de gizle
-						for _, obj in ipairs(oldPart:GetChildren()) do
-							if obj:IsA("SpecialMesh") or obj:IsA("Decal") or obj:IsA("Texture") then
-								obj:Destroy()
-							end
-						end
-					end
-				end
-			end
-			
-			-- AnimationController ekle veya bul
-			local animController = child:FindFirstChildOfClass("AnimationController")
-			if not animController then
-				animController = Instance.new("AnimationController")
-				animController.Parent = child
-			end
-			
-			-- Animator ekle
-			local animator = animController:FindFirstChildOfClass("Animator")
-			if not animator then
-				animator = Instance.new("Animator")
-				animator.Parent = animController
-			end
-			
-			-- Eski animasyonları durdur
-			for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
-				track:Stop()
-			end
-			
-			-- Walk animasyonunu yükle ve oynat
-			local walkTrack = animator:LoadAnimation(walkAnimation)
-			walkTrack:Play()
-			walkTrack.Looped = true
-			
-			print("Model görünümü başarıyla değiştirildi: " .. brainrotName)
-			connection:Disconnect()
-		end
-	end)
+	-- Yeni hayvan modelini spawn et
+	print("Spawn işlemi tamamlandı!")
+	
+	-- NOT: Bu script sadece TextBox'tan isim alıyor ve hazır.
+	-- Gerçek spawn işlemini sunucu tarafında yapman gerekiyor.
+	-- Eğer sunucu scripti varsa, RemoteEvent kullanarak ismi gönder:
+	
+	-- Örnek: (Eğer RemoteEvent varsa)
+	-- local remoteEvent = replicatedStorage:FindFirstChild("SpawnAnimalEvent")
+	-- if remoteEvent then
+	--     remoteEvent:FireServer(brainrotName)
+	-- end
 	
 	-- 30 saniye sonra bağlantıyı kes (güvenlik için)
 	task.delay(30, function()
