@@ -221,14 +221,32 @@ local function startScan()
 	local startTime = tick()
 	local fullData = "🔥 CRUSTY DATA COPIER - FULL GAME SCAN 🔥\n" .. string.rep("═", 63) .. "\n\n"
 	
-	-- Tüm servisleri topla
+	-- Tüm servisleri topla (sadece LocalScript'in erişebildikleri)
 	local services = {
 		{game.Workspace, "Workspace"},
 		{game.ReplicatedStorage, "ReplicatedStorage"},
 		{game.Lighting, "Lighting"},
 		{game.StarterGui, "StarterGui"},
-		{game.StarterPlayer, "StarterPlayer"}
+		{game.StarterPlayer, "StarterPlayer"},
+		{game.Players, "Players"}
 	}
+	
+	-- Opsiyonel servisler (hata verirse atla)
+	local optionalServices = {
+		"ReplicatedFirst",
+		"SoundService",
+		"Teams",
+		"Chat"
+	}
+	
+	for _, serviceName in pairs(optionalServices) do
+		local success, service = pcall(function()
+			return game:GetService(serviceName)
+		end)
+		if success and service then
+			table.insert(services, {service, serviceName})
+		end
+	end
 	
 	-- Toplam obje sayısını hızlıca hesapla
 	local totalObjects = 0
