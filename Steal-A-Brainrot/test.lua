@@ -1,4 +1,4 @@
--- CRUSTY DATA COPIER - EXPLOIT VERSION
+-- CRUSTY DATA COPIER
 -- Hatasız, hızlı, güvenli
 
 local player = game:GetService("Players").LocalPlayer
@@ -180,52 +180,43 @@ end
 local function startScan()
 	local startTime = tick()
 	local fullData = "🔥 CRUSTY DATA COPIER 🔥\n" .. string.rep("=", 50) .. "\n\n"
-	
-	-- Güvenli servisler
-	local services = {}
-	
-	local serviceNames = {
-		"Workspace",
-		"ReplicatedStorage", 
-		"Lighting",
-		"Players"
+
+	-- Hedefler
+	local targets = {
+		game:GetService("Workspace"):FindFirstChild("Events"),
+		game:GetService("Workspace"):FindFirstChild("RenderedMovingAnimals"),
+		game:GetService("ReplicatedStorage"):FindFirstChild("Animations") and game:GetService("ReplicatedStorage").Animations:FindFirstChild("Animals"),
+		game:GetService("ReplicatedStorage"):FindFirstChild("Animations") and game:GetService("ReplicatedStorage").Animations:FindFirstChild("Events"),
+		game:GetService("ReplicatedStorage"):FindFirstChild("Sounds") and game:GetService("ReplicatedStorage").Sounds:FindFirstChild("Animals"),
+		game:GetService("ReplicatedStorage"):FindFirstChild("Sounds") and game:GetService("ReplicatedStorage").Sounds:FindFirstChild("Events")
 	}
-	
-	for _, sName in pairs(serviceNames) do
-		local suc, serv = pcall(function()
-			return game:GetService(sName)
-		end)
-		if suc and serv then
-			table.insert(services, {serv, sName})
+
+	-- Geçerli olanları filtrele
+	local validTargets = {}
+	for _, t in pairs(targets) do
+		if t then
+			table.insert(validTargets, t)
 		end
 	end
-	
+
 	-- Toplam hesapla
 	local totalObjects = 0
-	for _, sData in pairs(services) do
-		local suc, descs = pcall(function()
-			return sData[1]:GetDescendants()
-		end)
+	for _, target in pairs(validTargets) do
+		local suc, descs = pcall(function() return target:GetDescendants() end)
 		if suc and descs then
 			totalObjects = totalObjects + #descs
 		end
 	end
-	
+
 	local copiedObjects = 0
 	local errorCount = 0
 	local lastUpdate = 0
-	
+
 	-- Tara
-	for _, sData in pairs(services) do
-		local service = sData[1]
-		local serviceName = sData[2]
-		
-		fullData = fullData .. "\n🗂️  " .. serviceName .. "\n" .. string.rep("-", 30) .. "\n"
-		
-		local suc, descs = pcall(function()
-			return service:GetDescendants()
-		end)
-		
+	for _, target in pairs(validTargets) do
+		fullData = fullData .. "\n🗂️  " .. target:GetFullName() .. "\n" .. string.rep("-", 30) .. "\n"
+
+		local suc, descs = pcall(function() return target:GetDescendants() end)
 		if suc and descs then
 			for i, desc in pairs(descs) do
 				local data = serializeInstance(desc)
@@ -234,9 +225,9 @@ local function startScan()
 				else
 					fullData = fullData .. data
 				end
-				
+
 				copiedObjects = copiedObjects + 1
-				
+
 				local now = tick()
 				if now - lastUpdate >= 0.15 then
 					local elapsed = now - startTime
@@ -244,13 +235,13 @@ local function startScan()
 					pcall(function()
 						itemName = desc.ClassName .. " " .. desc.Name
 					end)
-					
-					progressLabel.Text = "Taranıyor: " .. serviceName
+
+					progressLabel.Text = "Taranıyor: " .. target.Name
 					updateProgress(copiedObjects, totalObjects)
 					updateStats(copiedObjects, totalObjects, elapsed, itemName)
 					lastUpdate = now
 				end
-				
+
 				if i % 150 == 0 then
 					task.wait()
 				end
@@ -259,7 +250,7 @@ local function startScan()
 			errorCount = errorCount + 1
 		end
 	end
-	
+
 	-- Özet
 	local totalTime = tick() - startTime
 	fullData = fullData .. "\n" .. string.rep("=", 50) .. "\n"
@@ -268,10 +259,10 @@ local function startScan()
 	fullData = fullData .. "❌ Hatalar: " .. errorCount .. "\n"
 	fullData = fullData .. "⏱️ Süre: " .. string.format("%.2f", totalTime) .. "s\n"
 	fullData = fullData .. string.rep("=", 50) .. "\n"
-	
+
 	-- Kaydet
 	local saved = false
-	
+
 	if setclipboard then
 		pcall(function()
 			setclipboard(fullData)
@@ -280,7 +271,7 @@ local function startScan()
 			saved = true
 		end)
 	end
-	
+
 	if not saved and writefile then
 		pcall(function()
 			writefile("crusty_game_copy.txt", fullData)
@@ -289,20 +280,20 @@ local function startScan()
 			saved = true
 		end)
 	end
-	
+
 	if not saved then
 		statusLabel.Text = "⚠️ OUTPUT'A YAZILDI! KONSOLA BAK!"
 		statusLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
 		print(fullData)
 	end
-	
+
 	updateProgress(totalObjects, totalObjects)
 	progressLabel.Text = "✅ BİTTİ!"
-	
+
 	print("✅ CRUSTY DATA COPIER BİTTİ!")
 	print("📦 " .. copiedObjects .. " obje kopyalandı")
 	print("❌ " .. errorCount .. " hata atlandı")
-	
+
 	task.wait(5)
 	pcall(function()
 		screenGui:Destroy()
