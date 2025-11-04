@@ -205,18 +205,83 @@ spawnButton.MouseButton1Click:Connect(function()
 		return
 	end
 	
-	-- Yeni hayvan modelini spawn et
-	print("Spawn işlemi tamamlandı!")
+	-- Ses klasörünü kontrol et
+	local soundsFolder = replicatedStorage:FindFirstChild("Sounds")
+	local animalSound = nil
 	
-	-- NOT: Bu script sadece TextBox'tan isim alıyor ve hazır.
-	-- Gerçek spawn işlemini sunucu tarafında yapman gerekiyor.
-	-- Eğer sunucu scripti varsa, RemoteEvent kullanarak ismi gönder:
+	if soundsFolder then
+		local animalSoundsFolder = soundsFolder:FindFirstChild("Animals")
+		if animalSoundsFolder then
+			animalSound = animalSoundsFolder:FindFirstChild(brainrotName)
+			if not animalSound then
+				warn("ReplicatedStorage/Sounds/Animals/" .. brainrotName .. " sesi bulunamadı!")
+			end
+		else
+			warn("ReplicatedStorage/Sounds/Animals klasörü bulunamadı!")
+		end
+	else
+		warn("ReplicatedStorage/Sounds klasörü bulunamadı!")
+	end
 	
-	-- Örnek: (Eğer RemoteEvent varsa)
-	-- local remoteEvent = replicatedStorage:FindFirstChild("SpawnAnimalEvent")
-	-- if remoteEvent then
-	--     remoteEvent:FireServer(brainrotName)
-	-- end
+	-- RenderedMovingAnimals içindeki modeli değiştir
+	-- Yeni oluşan ilk modeli bekle ve değiştir
+	local connection
+	connection = renderedFolder.ChildAdded:Connect(function(child)
+		if child:IsA("Model") then
+			print("Yeni model algılandı: " .. child.Name)
+			
+			-- Modeli klonla ve değiştir
+			local clonedModel = newModel:Clone()
+			clonedModel.Name = child.Name
+			clonedModel.Parent = renderedFolder
+			
+			-- Eski modelin pozisyonunu kopyala
+			if child.PrimaryPart and clonedModel.PrimaryPart then
+				clonedModel:SetPrimaryPartCFrame(child.PrimaryPart.CFrame)
+			end
+			
+			-- AnimationController ekle veya bul
+			local animController = clonedModel:FindFirstChildOfClass("AnimationController")
+			if not animController then
+				animController = Instance.new("AnimationController")
+				animController.Parent = clonedModel
+			end
+			
+			-- Animator ekle
+			local animator = animController:FindFirstChildOfClass("Animator")
+			if not animator then
+				animator = Instance.new("Animator")
+				animator.Parent = animController
+			end
+			
+			-- Walk animasyonunu yükle ve oynat
+			local walkTrack = animator:LoadAnimation(walkAnimation)
+			walkTrack:Play()
+			walkTrack.Looped = true
+			
+			-- Sesi çal (eğer varsa)
+			if animalSound and animalSound:IsA("Sound") then
+				local soundClone = animalSound:Clone()
+				soundClone.Parent = clonedModel.PrimaryPart or clonedModel:FindFirstChildWhichIsA("BasePart")
+				soundClone:Play()
+				
+				-- Ses bittiğinde kendini yok et (eğer looped değilse)
+				if not soundClone.Looped then
+					soundClone.Ended:Connect(function()
+						soundClone:Destroy()
+					end)
+				end
+				
+				print("Ses çalınıyor: " .. brainrotName)
+			end
+			
+			-- Eski modeli sil
+			child:Destroy()
+			
+			print("Model başarıyla değiştirildi: " .. brainrotName)
+			connection:Disconnect()
+		end
+	end)
 	
 	-- 30 saniye sonra bağlantıyı kes (güvenlik için)
 	task.delay(30, function()
