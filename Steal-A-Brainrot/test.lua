@@ -161,12 +161,8 @@ local function getAllProperties(instance)
 	local props = {}
 	local basicProps = {
 		"Name", "ClassName",
-		"Anchored", "CanCollide", "Transparency", "Material", "Color", "Size", "Position", "CFrame",
-		"Texture", "TextureId", "MeshId", "Scale",
-		"Volume", "Pitch", "SoundId", "Looped", "PlaybackSpeed",
-		"AnimationId", "Velocity", "MaxForce", "P",
-		"Text", "TextColor3", "TextSize", "Font", "BackgroundColor3",
-		"Value", "Enabled", "Brightness", "Range"
+		"Anchored", "CanCollide", "Transparency", "Material", "Color", "Size", "Position",
+		"TextureId", "MeshId", "SoundId", "AnimationId", "Value"
 	}
 	
 	for _, propName in pairs(basicProps) do
@@ -182,94 +178,112 @@ local function getAllProperties(instance)
 end
 
 local function serializeInstance(instance)
-	local result = ""
-	local separator = "─────────────────────────────────────────────\n"
-	
-	result = result .. separator
-	result = result .. "📦 " .. instance.ClassName .. ' "' .. instance.Name .. '"\n'
-	result = result .. "📍 Path: " .. getFullPath(instance) .. "\n"
-	
-	local props = getAllProperties(instance)
-	if next(props) then
-		result = result .. "⚙️  Properties:\n"
-		for propName, value in pairs(props) do
-			if typeof(value) == "Instance" then
-				result = result .. "  • " .. propName .. ": [" .. value.ClassName .. "] " .. value.Name .. "\n"
-			else
-				result = result .. "  • " .. propName .. ": " .. serializeValue(value) .. "\n"
+	local success, result = pcall(function()
+		local data = ""
+		
+		data = data .. "📦 " .. instance.ClassName .. ' "' .. instance.Name .. '"\n'
+		data = data .. "📍 " .. getFullPath(instance) .. "\n"
+		
+		-- Properties (sadece önemli olanlar)
+		local props = getAllProperties(instance)
+		if next(props) then
+			data = data .. "⚙️  "
+			for propName, value in pairs(props) do
+				if typeof(value) ~= "Instance" then
+					data = data .. propName .. "=" .. serializeValue(value) .. " | "
+				end
 			end
+			data = data .. "\n"
 		end
-	end
+		
+		-- Script source (ilk 200 karakter)
+		if instance:IsA("Script") or instance:IsA("LocalScript") or instance:IsA("ModuleScript") then
+			local source = instance.Source
+			if #source > 200 then
+				source = string.sub(source, 1, 200) .. "... [TRUNCATED]"
+			end
+			data = data .. "📜 " .. source .. "\n"
+		end
+		
+		data = data .. "\n"
+		return data
+	end)
 	
-	if instance:IsA("Script") or instance:IsA("LocalScript") or instance:IsA("ModuleScript") then
-		result = result .. "📜 Source:\n```lua\n" .. instance.Source .. "\n```\n"
+	if success then
+		return result
+	else
+		return "❌ ERROR: " .. instance.ClassName .. " '" .. instance.Name .. "' - " .. tostring(result) .. "\n\n"
 	end
-	
-	local children = instance:GetChildren()
-	if #children > 0 then
-		result = result .. "👶 Children: " .. #children .. "\n"
-	end
-	
-	result = result .. "\n"
-	return result
 end
 
 -- TARAMA BAŞLAT
 local function startScan()
 	local startTime = tick()
-	local fullData = [[
-╔═══════════════════════════════════════════════════════════════╗
-║           🔥 CRUSTY DATA COPIER - FULL GAME SCAN 🔥          ║
-╚═══════════════════════════════════════════════════════════════╝
-
-]]
+	local fullData = "🔥 CRUSTY DATA COPIER - FULL GAME SCAN 🔥\n" .. string.rep("═", 63) .. "\n\n"
 	
 	-- Tüm servisleri topla
 	local services = {
-		game.Workspace,
-		game.ReplicatedStorage,
-		game.ServerStorage,
-		game.ReplicatedFirst,
-		game.Lighting,
-		game.SoundService,
-		game.StarterGui,
-		game.StarterPack,
-		game.StarterPlayer,
-		game.Teams
+		{game.Workspace, "Workspace"},
+		{game.ReplicatedStorage, "ReplicatedStorage"},
+		{game.Lighting, "Lighting"},
+		{game.StarterGui, "StarterGui"},
+		{game.StarterPlayer, "StarterPlayer"}
 	}
 	
-	-- Toplam obje sayısını hesapla
+	-- Toplam obje sayısını hızlıca hesapla
 	local totalObjects = 0
-	for _, service in pairs(services) do
-		for _, descendant in pairs(service:GetDescendants()) do
-			totalObjects = totalObjects + 1
+	for _, serviceData in pairs(services) do
+		local success, count = pcall(function()
+			return #serviceData[1]:GetDescendants()
+		end)
+		if success then
+			totalObjects = totalObjects + count
 		end
 	end
 	
 	local copiedObjects = 0
+	local errorCount = 0
+	local lastUpdate = tick()
 	
 	-- Her servisi tara
-	for _, service in pairs(services) do
-		fullData = fullData .. "\n\n" .. string.rep("═", 63) .. "\n"
-		fullData = fullData .. "🗂️  SERVICE: " .. service.Name .. "\n"
-		fullData = fullData .. string.rep("═", 63) .. "\n\n"
+	for _, serviceData in pairs(services) do
+		local service = serviceData[1]
+		local serviceName = serviceData[2]
 		
-		local descendants = service:GetDescendants()
+		fullData = fullData .. "\n🗂️  " .. serviceName .. "\n" .. string.rep("─", 40) .. "\n"
 		
-		for i, descendant in pairs(descendants) do
-			-- UI Güncelle
-			copiedObjects = copiedObjects + 1
-			local elapsed = tick() - startTime
-			updateProgress(copiedObjects, totalObjects, "Taranıyor: " .. service.Name)
-			updateStats(copiedObjects, totalObjects, elapsed, descendant.ClassName .. ' "' .. descendant.Name .. '"')
-			
-			-- Veriyi ekle
-			fullData = fullData .. serializeInstance(descendant)
-			
-			-- Her 50 objede bir bekle (lag olmasın)
-			if i % 50 == 0 then
-				task.wait()
+		local success, descendants = pcall(function()
+			return service:GetDescendants()
+		end)
+		
+		if success then
+			for i, descendant in pairs(descendants) do
+				-- Hata yönetimi ile veriyi ekle
+				local data = serializeInstance(descendant)
+				if string.find(data, "❌ ERROR") then
+					errorCount = errorCount + 1
+				end
+				fullData = fullData .. data
+				
+				copiedObjects = copiedObjects + 1
+				
+				-- UI'yi her 0.1 saniyede bir güncelle (performans için)
+				local now = tick()
+				if now - lastUpdate >= 0.1 then
+					local elapsed = now - startTime
+					updateProgress(copiedObjects, totalObjects, "Taranıyor: " .. serviceName)
+					updateStats(copiedObjects, totalObjects, elapsed, descendant.ClassName .. ' "' .. descendant.Name .. '"')
+					lastUpdate = now
+				end
+				
+				-- Her 100 objede bir bekle (daha az lag)
+				if i % 100 == 0 then
+					task.wait()
+				end
 			end
+		else
+			fullData = fullData .. "❌ SERVICE ERROR: " .. serviceName .. " - " .. tostring(descendants) .. "\n\n"
+			errorCount = errorCount + 1
 		end
 	end
 	
@@ -277,35 +291,52 @@ local function startScan()
 	local totalTime = tick() - startTime
 	fullData = fullData .. "\n" .. string.rep("═", 63) .. "\n"
 	fullData = fullData .. "✅ TARAMA TAMAMLANDI!\n"
-	fullData = fullData .. "📦 Toplam Obje: " .. totalObjects .. "\n"
-	fullData = fullData .. "⏱️ Toplam Süre: " .. string.format("%.2f", totalTime) .. " saniye\n"
-	fullData = fullData .. "📅 Tarih: " .. os.date("%Y-%m-%d %H:%M:%S") .. "\n"
+	fullData = fullData .. "📦 Kopyalanan: " .. copiedObjects .. " / " .. totalObjects .. "\n"
+	fullData = fullData .. "❌ Hatalar: " .. errorCount .. "\n"
+	fullData = fullData .. "⏱️ Süre: " .. string.format("%.2f", totalTime) .. "s\n"
+	fullData = fullData .. "📅 " .. os.date("%Y-%m-%d %H:%M:%S") .. "\n"
 	fullData = fullData .. string.rep("═", 63) .. "\n"
 	
 	-- Kaydet
+	local saveSuccess = false
 	if setclipboard then
-		setclipboard(fullData)
-		statusLabel.Text = "✅ Panoya kopyalandı! CTRL+V ile yapıştır!"
-		statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
-	elseif writefile then
-		writefile("crusty_game_copy.txt", fullData)
-		statusLabel.Text = "✅ Dosyaya kaydedildi! (crusty_game_copy.txt)"
-		statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
-	else
-		statusLabel.Text = "⚠️ setclipboard/writefile yok! Output'a yazdırılıyor..."
+		local success = pcall(function()
+			setclipboard(fullData)
+		end)
+		if success then
+			statusLabel.Text = "✅ Panoya kopyalandı! CTRL+V"
+			statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+			saveSuccess = true
+		end
+	end
+	
+	if not saveSuccess and writefile then
+		local success = pcall(function()
+			writefile("crusty_game_copy.txt", fullData)
+		end)
+		if success then
+			statusLabel.Text = "✅ crusty_game_copy.txt kaydedildi!"
+			statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+			saveSuccess = true
+		end
+	end
+	
+	if not saveSuccess then
+		statusLabel.Text = "⚠️ Output'a yazdırılıyor..."
 		statusLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
 		print(fullData)
 	end
 	
 	updateProgress(totalObjects, totalObjects, "✅ Tamamlandı!")
-	updateStats(copiedObjects, totalObjects, totalTime, "Bitti!")
+	updateStats(copiedObjects, totalObjects, totalTime, "Bitti! " .. errorCount .. " hata atlandı.")
 	
-	print("✅✅✅ CRUSTY DATA COPIER TAMAMLANDI!")
-	print("📦 " .. totalObjects .. " obje kopyalandı!")
-	print("⏱️ " .. string.format("%.2f", totalTime) .. " saniye sürdü!")
+	print("✅ CRUSTY DATA COPIER TAMAMLANDI!")
+	print("📦 " .. copiedObjects .. " / " .. totalObjects .. " obje kopyalandı")
+	print("❌ " .. errorCount .. " hata atlandı")
+	print("⏱️ " .. string.format("%.2f", totalTime) .. " saniye")
 	
-	-- 3 saniye sonra UI'yi kapat
-	task.wait(3)
+	-- 5 saniye sonra UI'yi kapat
+	task.wait(5)
 	screenGui:Destroy()
 end
 
