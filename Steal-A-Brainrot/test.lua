@@ -223,24 +223,43 @@ spawnButton.MouseButton1Click:Connect(function()
 		warn("ReplicatedStorage/Sounds klasörü bulunamadı!")
 	end
 	
-	-- RenderedMovingAnimals içindeki modeli değiştir
-	-- Yeni oluşan ilk modeli bekle ve değiştir
+	-- İLK gelen modeli bekle
+	print("İlk model bekleniyor...")
+	
 	local connection
 	connection = renderedFolder.ChildAdded:Connect(function(child)
 		if child:IsA("Model") then
-			print("Yeni model algılandı: " .. child.Name)
+			print("İlk model yakalandı: " .. child.Name)
 			
-			-- Modeli klonla ve değiştir
-			local clonedModel = newModel:Clone()
-			clonedModel.Name = child.Name
-			clonedModel.Parent = renderedFolder
+			-- Eski modelin scriptlerini ve özelliklerini sakla
+			local oldPrimaryPart = child.PrimaryPart or child:FindFirstChildWhichIsA("BasePart")
+			local oldCFrame = oldPrimaryPart and oldPrimaryPart.CFrame or CFrame.new(0, 0, 0)
 			
-			-- Eski modelin pozisyonunu kopyala
-			if child.PrimaryPart and clonedModel.PrimaryPart then
-				clonedModel:SetPrimaryPartCFrame(child.PrimaryPart.CFrame)
+			-- Eski modelin içindeki TÜM scriptleri bul
+			local scriptsToKeep = {}
+			for _, descendant in pairs(child:GetDescendants()) do
+				if descendant:IsA("Script") or descendant:IsA("LocalScript") or descendant:IsA("ModuleScript") then
+					table.insert(scriptsToKeep, descendant:Clone())
+				end
 			end
 			
-			-- AnimationController ekle veya bul
+			-- Yeni modeli klonla
+			local clonedModel = newModel:Clone()
+			clonedModel.Name = child.Name
+			
+			-- Eski modelin pozisyonunu ayarla
+			if clonedModel.PrimaryPart then
+				clonedModel:SetPrimaryPartCFrame(oldCFrame)
+			elseif clonedModel:FindFirstChildWhichIsA("BasePart") then
+				clonedModel:FindFirstChildWhichIsA("BasePart").CFrame = oldCFrame
+			end
+			
+			-- ESKİ scriptleri YENİ modele ekle (hareket scriptleri çalışsın)
+			for _, script in pairs(scriptsToKeep) do
+				script.Parent = clonedModel
+			end
+			
+			-- AnimationController ekle
 			local animController = clonedModel:FindFirstChildOfClass("AnimationController")
 			if not animController then
 				animController = Instance.new("AnimationController")
@@ -259,13 +278,12 @@ spawnButton.MouseButton1Click:Connect(function()
 			walkTrack:Play()
 			walkTrack.Looped = true
 			
-			-- Sesi çal (eğer varsa)
+			-- Sesi ekle
 			if animalSound and animalSound:IsA("Sound") then
 				local soundClone = animalSound:Clone()
 				soundClone.Parent = clonedModel.PrimaryPart or clonedModel:FindFirstChildWhichIsA("BasePart")
 				soundClone:Play()
 				
-				-- Ses bittiğinde kendini yok et (eğer looped değilse)
 				if not soundClone.Looped then
 					soundClone.Ended:Connect(function()
 						soundClone:Destroy()
@@ -275,18 +293,22 @@ spawnButton.MouseButton1Click:Connect(function()
 				print("Ses çalınıyor: " .. brainrotName)
 			end
 			
-			-- Eski modeli sil
+			-- Yeni modeli workspace'e ekle
+			clonedModel.Parent = renderedFolder
+			
+			-- Eski modeli SİL
 			child:Destroy()
 			
-			print("Model başarıyla değiştirildi: " .. brainrotName)
+			print("✅ Model başarıyla değiştirildi: " .. brainrotName)
 			connection:Disconnect()
 		end
 	end)
 	
-	-- 30 saniye sonra bağlantıyı kes (güvenlik için)
+	-- 30 saniye timeout
 	task.delay(30, function()
 		if connection then
 			connection:Disconnect()
+			warn("⏱️ Timeout: 30 saniye içinde model gelmedi!")
 		end
 	end)
 end)
