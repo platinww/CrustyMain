@@ -212,21 +212,55 @@ spawnButton.MouseButton1Click:Connect(function()
 		if child:IsA("Model") then
 			print("Yeni model algılandı: " .. child.Name)
 			
-			-- Modeli klonla ve değiştir
-			local clonedModel = newModel:Clone()
-			clonedModel.Name = child.Name
-			clonedModel.Parent = renderedFolder
+			-- Eski modelin tüm scriptlerini ve özelliklerini sakla
+			local originalScripts = {}
+			for _, obj in ipairs(child:GetDescendants()) do
+				if obj:IsA("Script") or obj:IsA("LocalScript") or obj:IsA("ModuleScript") then
+					table.insert(originalScripts, obj)
+				end
+			end
 			
-			-- Eski modelin pozisyonunu kopyala
-			if child.PrimaryPart and clonedModel.PrimaryPart then
-				clonedModel:SetPrimaryPartCFrame(child.PrimaryPart.CFrame)
+			-- Eski modelin mesh/görünüm partlarını bul ve sil
+			local oldParts = {}
+			for _, obj in ipairs(child:GetDescendants()) do
+				if obj:IsA("BasePart") or obj:IsA("MeshPart") or obj:IsA("Part") then
+					-- Script içermeyen partları sil
+					local hasScript = false
+					for _, script in ipairs(originalScripts) do
+						if script:IsDescendantOf(obj) then
+							hasScript = true
+							break
+						end
+					end
+					if not hasScript then
+						table.insert(oldParts, obj)
+					end
+				end
+			end
+			
+			-- Yeni modelin görünümünü klonla
+			local clonedModel = newModel:Clone()
+			
+			-- Yeni modelin partlarını eski modele ekle
+			for _, obj in ipairs(clonedModel:GetDescendants()) do
+				if obj:IsA("BasePart") or obj:IsA("MeshPart") or obj:IsA("Part") or obj:IsA("Attachment") or obj:IsA("WeldConstraint") or obj:IsA("Motor6D") then
+					local clonedObj = obj:Clone()
+					clonedObj.Parent = child
+				end
+			end
+			
+			-- Eski mesh/görünüm partlarını sil
+			for _, part in ipairs(oldParts) do
+				if part.Parent then
+					part:Destroy()
+				end
 			end
 			
 			-- AnimationController ekle veya bul
-			local animController = clonedModel:FindFirstChildOfClass("AnimationController")
+			local animController = child:FindFirstChildOfClass("AnimationController")
 			if not animController then
 				animController = Instance.new("AnimationController")
-				animController.Parent = clonedModel
+				animController.Parent = child
 			end
 			
 			-- Animator ekle
@@ -236,14 +270,17 @@ spawnButton.MouseButton1Click:Connect(function()
 				animator.Parent = animController
 			end
 			
+			-- Eski animasyonları durdur
+			for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
+				track:Stop()
+			end
+			
 			-- Walk animasyonunu yükle ve oynat
 			local walkTrack = animator:LoadAnimation(walkAnimation)
 			walkTrack:Play()
+			walkTrack.Looped = true
 			
-			-- Eski modeli sil
-			child:Destroy()
-			
-			print("Model başarıyla değiştirildi: " .. brainrotName)
+			print("Model görünümü başarıyla değiştirildi: " .. brainrotName)
 			connection:Disconnect()
 		end
 	end)
