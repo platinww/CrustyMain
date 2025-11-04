@@ -235,12 +235,12 @@ spawnButton.MouseButton1Click:Connect(function()
 			local oldPrimaryPart = child.PrimaryPart or child:FindFirstChildWhichIsA("BasePart")
 			local oldCFrame = oldPrimaryPart and oldPrimaryPart.CFrame or CFrame.new(0, 5, 0)
 			
-			-- Yeni modeli klonla
-			local clonedModel = newModel:Clone()
-			clonedModel.Name = child.Name
+			-- ESKİ MODELİ SİL
+			child:Destroy()
 			
-			-- Yeni modeli workspace'e ekle
-			clonedModel.Parent = renderedFolder
+			-- YENİ MODELİ KLONLA
+			local clonedModel = newModel:Clone()
+			clonedModel.Name = "Animal_" .. brainrotName
 			
 			-- 5 STUD YUKARIDA spawn et
 			if clonedModel.PrimaryPart then
@@ -249,40 +249,36 @@ spawnButton.MouseButton1Click:Connect(function()
 				clonedModel:FindFirstChildWhichIsA("BasePart").CFrame = oldCFrame * CFrame.new(0, 5, 0)
 			end
 			
-			-- AnimationController ekle
+			-- Yeni modeli workspace'e ekle
+			clonedModel.Parent = renderedFolder
+			
+			-- AnimationController ekle veya bul
 			local animController = clonedModel:FindFirstChildOfClass("AnimationController")
 			if not animController then
 				animController = Instance.new("AnimationController")
 				animController.Parent = clonedModel
-				print("AnimationController oluşturuldu")
+				print("✅ AnimationController oluşturuldu")
 			end
 			
-			-- Animator ekle
-			local animator = animController:FindFirstChildOfClass("Animator")
-			if not animator then
-				animator = Instance.new("Animator")
-				animator.Parent = animController
-				print("Animator oluşturuldu")
-			end
-			
-			-- Animasyonu yükle (task.wait ile bekle)
+			-- AnimationTrack oluştur ve yükle
 			task.wait(0.1)
 			
 			if walkAnimation and walkAnimation:IsA("Animation") then
-				print("Animasyon yükleniyor: " .. walkAnimation.AnimationId)
-				local success, walkTrack = pcall(function()
-					return animator:LoadAnimation(walkAnimation)
-				end)
+				print("🎬 Animasyon yükleniyor: " .. walkAnimation.AnimationId)
 				
-				if success and walkTrack then
-					walkTrack.Looped = true
-					walkTrack:Play()
-					print("✅ Animasyon oynatılıyor!")
+				-- AnimationTrack oluştur
+				local animationTrack = animController:LoadAnimation(walkAnimation)
+				
+				if animationTrack then
+					animationTrack.Looped = true
+					animationTrack.Priority = Enum.AnimationPriority.Action
+					animationTrack:Play()
+					print("✅ Animasyon BAŞARIYLA oynatılıyor!")
 				else
-					warn("❌ Animasyon yüklenemedi!")
+					warn("❌ AnimationTrack oluşturulamadı!")
 				end
 			else
-				warn("❌ Walk animasyonu geçerli bir Animation değil!")
+				warn("❌ Walk animasyonu bulunamadı veya geçersiz!")
 			end
 			
 			-- 15 hız ile ileri doğru hareket ettir
@@ -292,8 +288,9 @@ spawnButton.MouseButton1Click:Connect(function()
 				local bodyVelocity = Instance.new("BodyVelocity")
 				bodyVelocity.Velocity = primaryPart.CFrame.LookVector * 15
 				bodyVelocity.MaxForce = Vector3.new(4000, 0, 4000)
+				bodyVelocity.P = 1250
 				bodyVelocity.Parent = primaryPart
-				print("✅ BodyVelocity eklendi, hız: 15")
+				print("✅ BodyVelocity eklendi - Hız: 15")
 			end
 			
 			-- Sesi ekle
@@ -311,10 +308,7 @@ spawnButton.MouseButton1Click:Connect(function()
 				print("✅ Ses çalınıyor: " .. brainrotName)
 			end
 			
-			-- Eski modeli SİL
-			child:Destroy()
-			
-			print("✅ Model başarıyla değiştirildi: " .. brainrotName)
+			print("✅✅✅ TAMAMLANDI: " .. brainrotName)
 			connection:Disconnect()
 		end
 	end)
