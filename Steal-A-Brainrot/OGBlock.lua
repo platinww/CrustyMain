@@ -1,4 +1,5 @@
 -- OPENSOURCE
+-- discord.gg/crustyhub
 
 task.wait(1)
 local StarterGui = game:GetService("StarterGui")
@@ -10,6 +11,25 @@ local function notify(text)
         Duration = 5
     })
 end
+local function forceOGGradient(label)
+    local gradient = label:FindFirstChildOfClass("UIGradient")
+    if gradient then
+        gradient.Color = ColorSequence.new{
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(255,221,85)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(255,170,0))
+        }
+    end
+end
+local function applyOGStyle(label)
+    label.TextColor3 = Color3.fromRGB(255,221,85)
+    if not label:FindFirstChildOfClass("UIStroke") then
+        local stroke = Instance.new("UIStroke")
+        stroke.Color = Color3.fromRGB(0,0,0)
+        stroke.Thickness = 2
+        stroke.Parent = label
+    end
+    forceOGGradient(label)
+end
 local function changeText(v)
     if v:IsA("TextLabel") then
         local parent = v.Parent
@@ -18,26 +38,20 @@ local function changeText(v)
             foundLuckyBlock = true
             if v.Text == "Secret" then
                 v.Text = "OG"
-                v.TextColor3 = Color3.fromRGB(255,221,85)
-                if not v:FindFirstChildOfClass("UIStroke") then
-                    local stroke = Instance.new("UIStroke")
-                    stroke.Color = Color3.fromRGB(0,0,0)
-                    stroke.Thickness = 2
-                    stroke.Parent = v
-                end
-                local gradient = v:FindFirstChildOfClass("UIGradient")
-                if gradient then
-                    gradient.Color = ColorSequence.new{
-                        ColorSequenceKeypoint.new(0, Color3.fromRGB(255,221,85)),
-                        ColorSequenceKeypoint.new(1, Color3.fromRGB(255,170,0))
-                    }
-                end
+                applyOGStyle(v)
             end
             if v.Text == "$750M" then
                 v.Text = "$750B"
             end
-
         end
+        if string.find(v.Text, "Do you want to sell Secret Lucky Block") then
+            v.Text = "Do you want to sell OG Lucky Block"
+        end
+        if string.find(v.Text, "Secret") then
+            v.Text = string.gsub(v.Text, "Secret", "OG")
+            forceOGGradient(v)
+        end
+
     end
 end
 for _, v in pairs(game:GetDescendants()) do
